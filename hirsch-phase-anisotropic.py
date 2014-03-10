@@ -167,14 +167,14 @@ def makePotential(paramDict,C,M):
   return spacetime_1,spacetime_2,expVs_up,expVs_dn
 # }}}
 
-def multiplySlicesStart(N,expK,expVs,order): # Multiplices “B_i”s in a given order from the head. {{{
+def multiplySlicesStart(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the head. {{{
   I = numpy.eye(N,dtype=numpy.complex128)
   B = numpy.eye(N,dtype=numpy.complex128)
   for l in order:
     B = numpy.dot(B,numpy.dot(expK,expVs[l]))
   return B #}}}
 
-def multiplySlicesEnd(N,expK,expVs,order): # Multiplices “B_i”s in a given order from the tail. {{{
+def multiplySlicesEnd(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the tail. {{{
   I = numpy.eye(N,dtype=numpy.complex128)
   B = numpy.eye(N,dtype=numpy.complex128)
   for l in order:
