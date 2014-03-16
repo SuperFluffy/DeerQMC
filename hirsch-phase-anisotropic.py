@@ -66,8 +66,21 @@ def grouper(n,iterable):
   it = iter(iterable)
   return iter(lambda: tuple(itools.islice(it,n)), ()) #}}}
 
-def compress_array(A):
-    return numpy.sum(two**numpy.arange(len(a),dtype=numpy.uint64)*a)
+def compress_array(A): # Only chains of up to 64 elements
+  spinSpecies = [-1,+1] # Only two spin-species
+  testSample = numpy.invert(numpy.in1d(A,spinsSample))
+  ixWrong = numpy.where(testsample)[0]
+  if A.size > 64:
+    raise ValueError("Size of {0} of input array too large for compression.".format(A.size))
+  elif ixWrong.size > 0:
+    raise ValueError("Unknown spin species' in lattice: {0}".format(', '.join(map(', ', numpy.unique(A[ixWrong])))))
+  else:
+    B = numpy.copy(A)
+    B[ A==(-1) ] = 0
+    C = numpy.zeros(64,dtype='u8')
+    C[0:(B.size)] = B
+    D = numpy.packbits(C)
+  return D[0]
 
 def UDR(A): # Calculate the UDR decomposition of a matrix {{{
   U,r = sl.qr(A)
@@ -98,10 +111,10 @@ def calcDeterminantPhase(M):
 
 # K, V initialization {{{
 # Store array as (L,N), since the Python stores in row-major form -> faster access
-def makeField(L,N,spins=None):
+def makeField(L,N,spinsSample=None):
   if sample == None:
     spinsSample = [-1,+1]
-  randarray = nr.choice([-1,+1],size=N*L)
+  randarray = nr.choice(spinsSample,size=N*L)
   spacetime = randarray.reshape(L,N)
   return spacetime
 
