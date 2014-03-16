@@ -30,7 +30,7 @@ def timing(func):
         return (t2-t1),res
     return wrapper
 
-class UnknownParameter(Exception): # Custom UnknownParameter exception {{{
+class ParameterError(Exception): # Custom exception {{{
   pass #}}}
 
 # Construct dtype dtypes {{{
@@ -456,7 +456,7 @@ def calcRatios(l,i,spacetime,paramDict,upState,downState,which): #{{{
     else:
       lmbd = paramDict['lambda2 general']
   else: 
-    raise UnknownParameter("Unknown parameter: {0}".format(which))
+    raise ParameterError("Unknown parameter: {0}".format(which))
 
   val_up = {}
   val_up['delta'] = numpy.exp(-2*(spinUp)*lmbd*s)
@@ -913,8 +913,8 @@ def startSimulation(paramNo,configDict,outputName): #{{{
 # Get all the relevenat values out of the dictionary
   try:
     paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState = setupSimulation(configDict)
-  except UnknownParameter as upErr:
-    logging.error(upErr)
+  except ParameterError as perr:
+    logging.error(perr)
   except ValueError as verr:
     logging.error(verr)
   else:
