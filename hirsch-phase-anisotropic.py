@@ -122,9 +122,10 @@ def makeField(L,N,spinsSample=None):
 def makeKin1D(N):
   K = numpy.eye(N,k=1,dtype=numpy.float64)
   K += numpy.eye(N,k=-1,dtype=numpy.float64)
-# Set the matrix elements to fulfil the PBC by hand. Note: this won't have an effect for a 2-site chain
-  K[0,N-1] = 1
-  K[N-1,0] = 1
+# Set the matrix elements to fulfil the PBC by hand. Has no effect on a 2-site chain
+  if N>1:
+    K[0,N-1] = 1
+    K[N-1,0] = 1
   return K
 
 # 2D case for symmetric square matrices
