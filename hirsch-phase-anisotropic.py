@@ -1,37 +1,27 @@
 #!/usr/bin/python
 
-import math
 import numpy 
-import scipy
-import numpy.random as nr
-import collections as coll
-import itertools as itools
-import scipy.linalg as sl
 
-import sys
+from itertools    import count, product
+from math         import floor
+from numpy.random import random
+from scipy        import linspace, polyval, polyfit
+from scipy.linalg import det, expm2, inv, LinAlgError
+
 import logging
 import yaml
 import argparse
+
 import time
-import datetime
+from datetime import timedelta
 
-import os.path
+import os.path as osp
 import h5py
-
-import itertools
 
 import ast
 
-def timing(func):
-    def wrapper(*arg,**kw):
-        t1 = time.time()
-        res = func(*arg,**kw)
-        t2 = time.time()
-        return (t2-t1),res
-    return wrapper
+from helper import *
 
-class ParameterError(Exception): # Custom exception {{{
-  pass #}}}
 
 # Construct dtype dtypes {{{
 def construct_parameter_dtype(domainWall):
@@ -53,234 +43,6 @@ def construct_parameter_dtype(domainWall):
                                  ,('domainWall', numpy.int64)
                                  ])
 #}}}
-
-#def grouper(n, iterable, fillvalue=None): # Group/slice iterables {{{
-## Taken from http://docs.python.org/3.3/library/itertools.html#itertools-recipes
-#    "Collect data into fixed-length chunks or blocks"
-#    # grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
-#    args = [iter(iterable)] * n
-#    return zip_longest(*args, fillvalue=fillvalue)
-
-def grouper(n,iterable): 
-# From http://stackoverflow.com/questions/12185952/python-optimize-grouper-function-to-avoid-none-elements
-  it = iter(iterable)
-  return iter(lambda: tuple(itools.islice(it,n)), ()) #}}}
-
-def compress_array(A): # Only chains of up to 64 elements {{{
-  spinSpecies = [-1,+1] # Only two spin-species
-  testSample = numpy.invert(numpy.in1d(A,spinsSample))
-  ixWrong = numpy.where(testsample)[0]
-  if A.size > 64:
-    raise ValueError("Size of {0} of input array too large for compression.".format(A.size))
-  elif ixWrong.size > 0:
-    raise ValueError("Unknown spin species' in lattice: {0}".format(', '.join(map(', ', numpy.unique(A[ixWrong])))))
-  else:
-    B = numpy.copy(A)
-    B[ A==(-1) ] = 0
-    C = numpy.zeros(64,dtype='u8')
-    C[0:(B.size)] = B
-    D = numpy.packbits(C)
-  return D[0]
-#}}}
-
-def UDR(A): # Calculate the UDR decomposition of a matrix {{{
-  U,r = sl.qr(A)
-  d = numpy.diagonal(r)
-  R = r / d[:,numpy.newaxis]
-  D = numpy.diagflat(d)
-  return U,D,R #}}}
-
-def RDU(A): # Calculate the RDU decomposition of a matrix {{{
-  r,U = sl.rq(A)
-  d = numpy.diagonal(r)
-  R = r / d[numpy.newaxis,:]
-  D = numpy.diagflat(d)
-  return R,D,U #}}}
-
-def calcSign(M): #{{{
-  detM = sl.det(M)
-  return numpy.sign(detM) #}}}
-
-# Phase calculations {{{
-def phase(z):
-  return z/numpy.absolute(z)
-
-def calcDeterminantPhase(M):
-  detM = sl.det(M)
-  return numpy.absolute(detM),phase(detM)
-#}}}
-
-# K, V initialization {{{
-# Store array as (L,N), since the Python stores in row-major form -> faster access
-def makeField(L,N,spinsSample=None):
-  if sample == None:
-    spinsSample = [-1,+1]
-  randarray = nr.choice(spinsSample,size=N*L)
-  spacetime = randarray.reshape(L,N)
-  return spacetime
-
-# 1D case
-def makeKin1D(n,k):
-  K  = numpy.eye(n,k=+k,dtype=numpy.float64)
-  K += numpy.eye(n,k=-k,dtype=numpy.float64)
-# Set the matrix elements to fulfil the PBC by hand. Has no effect on a 2-site chain
-  if n>k:
-    K += numpy.eye(n,k=(n-k))
-    K += numpy.eye(n,k=-(n-k))
-  return K
-
-# 2D case for symmetric square matrices
-def makeKin2D(nx,ny):
-  Kx = makeKin1D(nx)
-  Ix = numpy.eye(nx,dtype=numpy.float64)
-
-  Ky = makeKin1D(ny)
-  Iy = numpy.eye(ny,dtype=numpy.float64)
-
-  K = numpy.kron(Iy,Kx) + numpy.kron(Ky,Ix)
-  return K
-
-def makeDiagBilinear(N,c):
-  D = c * numpy.eye(N,dtype=numpy.float64)
-  return D
-
-def makePotential(paramDict,C,M):
-  L = paramDict['L']
-  N = paramDict['N']
-  lambda1_general    = paramDict['lambda1 general']
-  lambda2_general    = paramDict['lambda2 general']
-  lambda1_domainWall = paramDict['lambda1 domainWall']
-  lambda2_domainWall = paramDict['lambda2 domainWall']
-  spinUp = paramDict['spinUp']
-  spinDn = paramDict['spinDn']
-
-  spinUp_other = paramDict['spinUp_other']
-  spinDn_other = paramDict['spinDn_other']
-
-  spacetime_1 = makeField(L,N)
-  spacetime_2 = makeField(L,N)
-
-  lattice_domainWall = [0] * N
-  for i in paramDict['domainWall indices']:
-    lattice_domainWall[i] = 1
-
-  lattice_general = numpy.array([x^1 for x in lattice_domainWall])
-  lattice_domainWall = numpy.array(lattice_domainWall)
-
-  V1  = lambda1_general    * numpy.array([numpy.diag(space) for space in (lattice_general * spacetime_1)],dtype=numpy.complex128)
-  V1 += lambda1_domainWall * numpy.array([numpy.diag(space) for space in (lattice_domainWall * spacetime_1)],dtype=numpy.complex128)
-
-  V2  = lambda2_general    * numpy.array([numpy.diag(space) for space in (lattice_general * spacetime_2)],dtype=numpy.complex128)
-  V2 += lambda2_domainWall * numpy.array([numpy.diag(space) for space in (lattice_domainWall * spacetime_2)],dtype=numpy.complex128)
-
-  expVs_up = numpy.array([sl.expm2(spinUp*v1 + spinUp_other * v2 + C + M) for (v1,v2) in zip(V1,V2)])
-  expVs_dn = numpy.array([sl.expm2(spinDn*v1 + spinDn_other * v2 + C - M) for (v1,v2) in zip(V1,V2)])
-
-  paramDict['lattice general']    = lattice_general
-  paramDict['lattice domainWall'] = lattice_domainWall
-
-  return spacetime_1,spacetime_2,expVs_up,expVs_dn
-# }}}
-
-def multiplySlicesStart(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the head. {{{
-  I = numpy.eye(N,dtype=numpy.complex128)
-  B = numpy.eye(N,dtype=numpy.complex128)
-  for l in order:
-    B = numpy.dot(B,numpy.dot(expK,expVs[l]))
-  return B #}}}
-
-def multiplySlicesEnd(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the tail. {{{
-  I = numpy.eye(N,dtype=numpy.complex128)
-  B = numpy.eye(N,dtype=numpy.complex128)
-  for l in order:
-    B = numpy.dot(numpy.dot(expK,expVs[l]),B)
-  return B #}}}
-
-def makeGreensUDR(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's function and the sign of the associated determinant {{{
-  det = 0
-  order = coll.deque(range(L))
-  order.rotate(i)
-  order.reverse() # Reverse the order so all the elements get multiplied from the right first
-  orderChunks = grouper(m,order)
-  I = numpy.eye(N,dtype=numpy.complex128)
-  U = numpy.copy(I)
-  D = numpy.copy(I)
-  R = numpy.copy(I)
-  for chunk in orderChunks:
-    B = multiplySlicesEnd(N,expK,expVs,chunk)
-    tmpMatrix = numpy.dot(numpy.dot(B,U),D)
-    U,D,r = UDR(tmpMatrix)
-    R = numpy.dot(r,R)
-  Uinv = sl.inv(U)
-  Rinv = sl.inv(R)
-  tmpMatrix = numpy.dot(Uinv,Rinv) + D
-  u,D,r = UDR(tmpMatrix)
-  U = numpy.dot(U,u)
-  R = numpy.dot(r,R)
-  if getDeterminant:
-    detR=det(R)
-    detU=det(U)
-    detD=det(D)
-    det = detR*detD*detU
-  Rinv = s.linv(R)
-  Dinv = s.linv(D)
-  Uinv = s.linv(U)
-  G = numpy.dot(numpy.dot(Rinv,Dinv),Uinv)
-  return det,G #}}}
-
-def makeGreensRDU(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's function and the sign of the associated determinant {{{
-  det = 0
-  order = coll.deque(range(L))
-  order.rotate(i)
-  orderChunks = grouper(m,order)
-
-  orderChunks = list(orderChunks)
-  numChunks = len(orderChunks)
-
-  I = numpy.eye(N,dtype=numpy.complex128)
-  U = numpy.copy(I)
-  D = numpy.copy(I)
-  R = numpy.copy(I)
-
-  calcChunks = 0
-
-# Create the partial matrix products and store them away (in reversed order)
-  for chunk in orderChunks:
-    B = multiplySlicesStart(N,expK,expVs,chunk)
-    tmpMatrix = numpy.dot(D,numpy.dot(U,B))
-    r,D,U = RDU(tmpMatrix)
-    R = numpy.dot(R,r)
-  Uinv = sl.inv(U)
-  Rinv = sl.inv(R)
-  tmpMatrix = numpy.dot(Rinv,Uinv) + D
-  r,D,u = RDU(tmpMatrix)
-  U = numpy.dot(u,U)
-  R = numpy.dot(R,r)
-  if getDeterminant:
-    detR = sl.det(R)
-    detU = sl.det(U)
-    detD = sl.det(D)
-    det  = detR*detD*detU
-  Rinv = sl.inv(R)
-  Dinv = sl.inv(D)
-  Uinv = sl.inv(U)
-  G = numpy.dot(Uinv,numpy.dot(Dinv,Rinv))
-  return det,G #}}}
-
-def makeGreensNaive(getDeterminant,L,N,expK,expVs,i): # As makeGreensUDR, but without UDR decomposition {{{
-  det = 0
-  order = coll.deque(range(L))
-  order.rotate(i)
-  I = numpy.eye(N,dtype=numpy.complex128)
-  A = numpy.eye(N,dtype=numpy.complex128)
-  for o in order:
-    B = numpy.dot(expK,expVs[o])
-    A = numpy.dot(A,B)
-  O = I + A
-  if getDeterminant:
-    det = sl.det(O)
-  G = sl.inv(O)
-  return det,G #}}}
 
 def makeGreensParts(getDeterminant,paramDict,state,sliceCount,sliceGroups): #{{{
   N = paramDict['N']
@@ -306,15 +68,15 @@ def makeGreensParts(getDeterminant,paramDict,state,sliceCount,sliceGroups): #{{{
     UR = numpy.copy(ones)
     DR = numpy.copy(ones)
     RR = numpy.copy(ones)
-    RLinv = sl.inv(RL)
-    ULinv = sl.inv(UL)
+    RLinv = inv(RL)
+    ULinv = inv(UL)
     tmpMatrix = numpy.dot(RLinv,ULinv) + DL
     rL,DL,uL = RDU(tmpMatrix)
     UL = numpy.dot(uL,UL)
     RL = numpy.dot(RL,rL)
-    RLinv = sl.inv(RL)
-    DLinv = sl.inv(DL)
-    ULinv = sl.inv(UL)
+    RLinv = inv(RL)
+    DLinv = inv(DL)
+    ULinv = inv(UL)
     state['G'] = numpy.dot(ULinv,numpy.dot(DLinv,RLinv))
   else:
     B = multiplySlicesEnd(N,expK,state['expVs'],sliceGroup)
@@ -328,14 +90,14 @@ def makeGreensParts(getDeterminant,paramDict,state,sliceCount,sliceGroups): #{{{
       UR,DR,r = UDR(tmpMatrix)
       RR = numpy.dot(r,RR)
 
-    URinv = sl.inv(UR)
-    ULinv = sl.inv(UL)
+    URinv = inv(UR)
+    ULinv = inv(UL)
     tmpMatrix = numpy.dot(URinv,ULinv) + numpy.dot(DR,numpy.dot(RR,numpy.dot(RL,DL)))
     U,D,R = UDR(tmpMatrix)
 
-    Rinv = sl.inv(R)
-    Dinv = sl.inv(D)
-    Uinv = sl.inv(U)
+    Rinv = inv(R)
+    Dinv = inv(D)
+    Uinv = inv(U)
     state['G'] = numpy.dot(ULinv,numpy.dot(Rinv,numpy.dot(Dinv,numpy.dot(Uinv,URinv))))
 
   state['B_right'][sliceCount,0] = UR
@@ -344,16 +106,16 @@ def makeGreensParts(getDeterminant,paramDict,state,sliceCount,sliceGroups): #{{{
 
   if getDeterminant:
     if sliceCount == 0:
-      detUL = sl.det(UL)
-      detDL = sl.det(DL)
-      detRL = sl.det(RL)
+      detUL = det(UL)
+      detDL = det(DL)
+      detRL = det(RL)
       det   = detUL*detDL*detRL
     else:
-      detUL = sl.det(UL)
-      detUR = sl.det(UR)
-      detD  = sl.det(D)
-      detU  = sl.det(U)
-      detR  = sl.det(R)
+      detUL = det(UL)
+      detUR = det(UR)
+      detD  = det(D)
+      detU  = det(U)
+      detR  = det(R)
       det   = detUL*detUR*detR*detD*detU
 
   return det #}}}
@@ -384,16 +146,16 @@ def initGreens(getPhase,paramDict,expVs,sliceGroups): # Returns a Green's functi
     B_left[chunkCount,1] = D
     B_left[chunkCount,2] = U
     chunkCount -= 1
-  Uinv = sl.inv(U)
-  Rinv = sl.inv(R)
+  Uinv = inv(U)
+  Rinv = inv(R)
   tmpMatrix = numpy.dot(Rinv,Uinv) + D
   r,D,u = RDU(tmpMatrix)
   U = numpy.dot(u,U)
   R = numpy.dot(R,r)
 
-  Rinv = sl.inv(R)
-  Dinv = sl.inv(D)
-  Uinv = sl.inv(U)
+  Rinv = inv(R)
+  Dinv = inv(D)
+  Uinv = inv(U)
   G = numpy.dot(Uinv,numpy.dot(Dinv,Rinv))
 
   state = {'G': G
@@ -439,14 +201,14 @@ def updateGreens(i,paramDict,state,weightValues): #{{{ Update scheme chooser
 
 def wrapGreens(expK,l,state): # Propagate the Green's function to the next time slice {{{
   B    = numpy.dot(expK,state['expVs'][l])
-  Binv = sl.inv(B)
+  Binv = inv(B)
   newG = numpy.dot(numpy.dot(B,state['G']),Binv)
   return newG #}}}
 
 def checkFlip(detTot,gamma=None): #{{{
   detTot_abs = numpy.absolute(detTot)
   r = detTot_abs / (1+detTot_abs)
-  p = nr.random()
+  p = random()
   flip = False
   if p < r:
     flip = True
@@ -519,7 +281,7 @@ def constructSystem(paramDict,sliceGroups): #{{{
   C = makeDiagBilinear(N,dtau*mu)
   M = makeDiagBilinear(N,dtau*B)
   K *= (-dtau*t)
-  expK = sl.expm2(-1*K)
+  expK = expm2(-1*K)
 
   paramDict['expK'] = expK
 
@@ -605,7 +367,7 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
 #        detDn = initGreens(True,paramDict,downState['expVs'],sliceGroups)[0]
 #        newWeight = detUp*detDn*numpy.exp((-1)*lambda2*numpy.sum(spacetime_2))
 #        print("Track: {0}; reset: {1}".format(weight,newWeight))
-          
+
         if useLambda2: # Sweep over the second Ising field {{{
           val_up_2, val_dn_2, detTot_2 = calcRatios( l, i, spacetime_2, paramDict, upState, downState, 'other' )
           if checkFlip(detTot_2):
@@ -642,9 +404,9 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
 def thermalized(measurements, tolerance=0.01): #{{{ Calculate whether thermalization was reached up to a certain tolerance
   results = [];
   totMean = measurements.mean();
-  measIndex = scipy.linspace(0, measurements.size-1, measurements.size)
+  measIndex = linspace(0, measurements.size-1, measurements.size)
 
-  fitted = scipy.polyval(scipy.polyfit(measIndex, measurements, 1), measIndex)  # fit measurements
+  fitted = polyval(polyfit(measIndex, measurements, 1), measIndex)  # fit measurements
   percentChange = (fitted[-1] - fitted[0])/totMean
 
   print(abs(percentChange))
@@ -652,13 +414,13 @@ def thermalized(measurements, tolerance=0.01): #{{{ Calculate whether thermaliza
 
 def makeLoggingFile(outputName): #{{{
   saveName = outputName
-  path,basename = os.path.split(outputName)
-  head,tail = os.path.splitext(basename)
+  path,basename = osp.split(outputName)
+  head,tail = osp.splitext(basename)
   triedNames = []
-  for n in itertools.count():
+  for n in count():
     try:
       basename = "{0}-{1}.log".format(head,n)
-      outputName = os.path.join(path,basename)
+      outputName = osp.join(path,basename)
       outputHandle = open(outputName, 'x')
     except OSError as oe: 
       triedNames.append(basename)
@@ -670,13 +432,13 @@ def makeLoggingFile(outputName): #{{{
 
 def makeOutputFile(outputName): #{{{
   saveName = outputName
-  path,basename = os.path.split(outputName)
-  head,tail = os.path.splitext(basename)
+  path,basename = osp.split(outputName)
+  head,tail = osp.splitext(basename)
   triedNames = []
-  for n in itertools.count():
+  for n in count():
     try:
       basename = "{0}-{1}.h5".format(head,n)
-      outputName = os.path.join(path,basename)
+      outputName = osp.join(path,basename)
       outputHandle = h5py.File(outputName, 'w-')
     except OSError as oe: 
       triedNames.append(basename)
@@ -842,8 +604,8 @@ def runSimulation(paramDict, sliceGroups, spacetime_1, spacetime_2, weightPhase,
       remaining = 10 - percentDone
       delta_estimate = remaining * delta_with_last
 
-      dtDone = str(datetime.timedelta(seconds=delta_with_start))
-      dtTodo = str(datetime.timedelta(seconds=delta_estimate))
+      dtDone = str(timedelta(seconds=delta_with_start))
+      dtTodo = str(timedelta(seconds=delta_estimate))
 
       logging.info("{0}% of sweeps completed in {1}, est. time remaining: {2}".format(percentDone*10,dtDone,dtTodo))
 
@@ -854,8 +616,8 @@ def runSimulation(paramDict, sliceGroups, spacetime_1, spacetime_2, weightPhase,
   deltaT = endTime - startTime
 
   #logging.info("Sweeps ended on {0}.".format(time.strftime("%d %b %Y at %H:%M:%S, %z",endTime_format)))
-  logging.info("Monte Carlo sweeps finished in: {0}.".format(str(datetime.timedelta(seconds=deltaT))))
-  logging.info("Average time per sweep: {0}.".format(str(datetime.timedelta(seconds=deltaT/no_meas))))
+  logging.info("Monte Carlo sweeps finished in: {0}.".format(str(timedelta(seconds=deltaT))))
+  logging.info("Average time per sweep: {0}.".format(str(timedelta(seconds=deltaT/no_meas))))
   totalSteps = no_meas*L*N
   #if useLambda2: # This was needed when the flip-count was bunching the 2 fields together
   #  totalSteps *= 2
@@ -882,7 +644,7 @@ def setupSimulation(configDict): # Fill the simulation parameter dictionary and 
   lambda2_domainWall = paramDict['lambda2 domainWall']
 
   dtau = 1/idtau
-  m = math.floor(1.2*idtau)
+  m = floor(1.2*idtau)
 
   L = beta * idtau
 
@@ -935,7 +697,7 @@ def startSimulation(paramNo,configDict,outputName): #{{{
   else:
     try:
       record_phases,record_field_1,record_field_2 = runSimulation(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState)
-    except sl.LinAlgError as lae:
+    except LinAlgError as lae:
       logging.error(lae)
     else:
       finalizeSimulation(paramNo,paramDict,outputName,record_phases,record_field_1,record_field_2)
@@ -1012,7 +774,7 @@ def processConfig(config): #{{{ Process the configuration file
     raise ValueError("Option '{}' for 'complexForm' in 'lambda2' not recognized.".format(sysConf['lambda2']['domainWall']['complexForm']))
 
   paramDicts = []
-  for mu, B, beta, idtau, lambda2_general, lambda2_domainWall in itools.product(mus, Bs, betas, idtaus, lambda2s_general, lambda2s_domainWall):
+  for mu, B, beta, idtau, lambda2_general, lambda2_domainWall in product(mus, Bs, betas, idtaus, lambda2s_general, lambda2s_domainWall):
     newpd                       = paramDict.copy()
     newpd['mu']                 = mu
     newpd['B']                  = B
