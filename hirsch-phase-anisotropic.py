@@ -66,7 +66,7 @@ def grouper(n,iterable):
   it = iter(iterable)
   return iter(lambda: tuple(itools.islice(it,n)), ()) #}}}
 
-def compress_array(A): # Only chains of up to 64 elements
+def compress_array(A): # Only chains of up to 64 elements {{{
   spinSpecies = [-1,+1] # Only two spin-species
   testSample = numpy.invert(numpy.in1d(A,spinsSample))
   ixWrong = numpy.where(testsample)[0]
@@ -81,6 +81,7 @@ def compress_array(A): # Only chains of up to 64 elements
     C[0:(B.size)] = B
     D = numpy.packbits(C)
   return D[0]
+#}}}
 
 def UDR(A): # Calculate the UDR decomposition of a matrix {{{
   U,r = sl.qr(A)
@@ -119,22 +120,22 @@ def makeField(L,N,spinsSample=None):
   return spacetime
 
 # 1D case
-def makeKin1D(N):
-  K = numpy.eye(N,k=1,dtype=numpy.float64)
-  K += numpy.eye(N,k=-1,dtype=numpy.float64)
+def makeKin1D(n):
+  K = numpy.eye(n,k=1,dtype=numpy.float64)
+  K += numpy.eye(n,k=-1,dtype=numpy.float64)
 # Set the matrix elements to fulfil the PBC by hand. Has no effect on a 2-site chain
-  if N>1:
-    K[0,N-1] = 1
-    K[N-1,0] = 1
+  if n>1:
+    K[0,n-1] = 1
+    K[n-1,0] = 1
   return K
 
 # 2D case for symmetric square matrices
-def makeKin2D(Nx,Ny):
-  Kx = makeKin1D(Nx)
-  Ix = numpy.eye(Nx,dtype=numpy.float64)
+def makeKin2D(nx,ny):
+  Kx = makeKin1D(nx)
+  Ix = numpy.eye(nx,dtype=numpy.float64)
 
-  Ky = makeKin1D(Ny)
-  Iy = numpy.eye(Ny,dtype=numpy.float64)
+  Ky = makeKin1D(ny)
+  Iy = numpy.eye(ny,dtype=numpy.float64)
 
   K = numpy.kron(Iy,Kx) + numpy.kron(Ky,Ix)
   return K
