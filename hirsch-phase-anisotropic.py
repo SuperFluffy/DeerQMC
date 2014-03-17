@@ -120,13 +120,13 @@ def makeField(L,N,spinsSample=None):
   return spacetime
 
 # 1D case
-def makeKin1D(n):
-  K = numpy.eye(n,k=1,dtype=numpy.float64)
-  K += numpy.eye(n,k=-1,dtype=numpy.float64)
+def makeKin1D(n,k):
+  K  = numpy.eye(n,k=+k,dtype=numpy.float64)
+  K += numpy.eye(n,k=-k,dtype=numpy.float64)
 # Set the matrix elements to fulfil the PBC by hand. Has no effect on a 2-site chain
-  if n>1:
-    K[0,n-1] = 1
-    K[n-1,0] = 1
+  if n>k:
+    K += numpy.eye(n,k=(n-k))
+    K += numpy.eye(n,k=-(n-k))
   return K
 
 # 2D case for symmetric square matrices
