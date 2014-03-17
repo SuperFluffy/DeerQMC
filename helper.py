@@ -6,11 +6,11 @@ from scipy.linalg import det, expm2, inv, qr, rq,
 
 from collections import deque
 
-__all__ = ['grouper', 'compress_array', 'UDR', 'RDU', 'calcSign', 'phase'
-          ,'calcDeterminantPhase', 'makeField', 'makeKin1D', 'makeKin2D'
-          ,'makeDiagBilinear', 'makePotential', 'multiplySlicesStart'
-          ,'multiplySlicesEnd', 'makeGreensUDR', 'makeGreensRDU',
-          ,'makeGreensNaive', 'timing', 'ParameterError']
+__all__ = ['calcDeterminantPhase', 'calcSign', 'compress_array', 'grouper',
+           'makeDiagBilinear', 'makeField', 'makeGreensUDR', 'makeGreensRDU',
+           'makeGreensNaive', 'makeKin1D', 'makeKin2D', 'makePotential',
+           'multiplySlicesStart', 'multiplySlicesEnd', 'phase', 'RDU', 'UDR',
+           'timing', 'ParameterError']
 
 class ParameterError(Exception): # Custom exception {{{
   pass #}}}
@@ -238,3 +238,12 @@ def makeGreensNaive(getDeterminant,L,N,expK,expVs,i): # As makeGreensUDR, but wi
     det = det(O)
   G = inv(O)
   return det,G #}}}
+
+def checkFlip(p,gamma=None): #{{{
+  r = p / (1+p)
+  q = random()
+  flip = False
+  if q < r:
+    flip = True
+  return flip #}}}
+

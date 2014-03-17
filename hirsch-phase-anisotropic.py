@@ -205,15 +205,6 @@ def wrapGreens(expK,l,state): # Propagate the Green's function to the next time 
   newG = numpy.dot(numpy.dot(B,state['G']),Binv)
   return newG #}}}
 
-def checkFlip(detTot,gamma=None): #{{{
-  detTot_abs = numpy.absolute(detTot)
-  r = detTot_abs / (1+detTot_abs)
-  p = random()
-  flip = False
-  if p < r:
-    flip = True
-  return flip #}}}
-
 def calcRatios(l,i,spacetime,paramDict,upState,downState,which): #{{{
   s = spacetime[l,i]
   gup = upState['G'][i,i]
@@ -352,7 +343,7 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
         # Sweep over the first Ising field {{{
         val_up_1, val_dn_1, detTot_1 = calcRatios( l, i, spacetime_1, paramDict, upState, downState, 'main' )
         #saveGup = numpy.copy(Gup)
-        if checkFlip(detTot_1):
+        if checkFlip(abs(detTot_1)):
           spacetime_1[l,i] *= -1
           upState['expVs'][l,i,i]   *= val_up_1['delta']
           downState['expVs'][l,i,i] *= val_dn_1['delta']
@@ -370,7 +361,7 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
 
         if useLambda2: # Sweep over the second Ising field {{{
           val_up_2, val_dn_2, detTot_2 = calcRatios( l, i, spacetime_2, paramDict, upState, downState, 'other' )
-          if checkFlip(detTot_2):
+          if checkFlip(abs(detTot_2)):
             spacetime_2[l,i] *= -1
             upState['expVs'][l,i,i]   *= val_up_2['delta']
             downState['expVs'][l,i,i] *= val_dn_2['delta']
