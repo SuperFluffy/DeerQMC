@@ -26,7 +26,8 @@ from helper import *
 # Construct dtype dtypes {{{
 def construct_parameter_dtype(domainWall):
   parameter_dtype = numpy.dtype([('beta',numpy.float64)
-                                 ,('t',numpy.float64)
+                                 ,('tn',numpy.float64)
+                                 ,('tnn',numpy.float64)
                                  ,('U',numpy.float64)
                                  ,('mu',numpy.float64)
                                  ,('B',numpy.float64)
@@ -243,7 +244,8 @@ def calcRatios(l,i,spacetime,paramDict,upState,downState,which): #{{{
 def constructSystem(paramDict,sliceGroups): #{{{
   edgeLength_x = paramDict['edgeLength x']
   edgeLength_y = paramDict['edgeLength y']
-  t = paramDict['t']
+  tn = paramDict['tn']
+  tnn = paramDict['tnn']
   U = paramDict['U']
   mu = paramDict['mu']
   B = paramDict['B']
@@ -263,7 +265,9 @@ def constructSystem(paramDict,sliceGroups): #{{{
   spinUp_other = paramDict['spinUp_other']
   spinDn_other = paramDict['spinDn_other']
 
-  K = makeHopp2D(edgeLength_x,edgeLength_y,1)
+  Kn  = (-dtau*tn) *  makeHopp2D(edgeLength_x,edgeLength_y,1)
+  Knn = (-dtau*tnn) * makeHopp2D(edgeLength_x,edgeLength_y,2)
+  K = Kn + Knn
 
   N = edgeLength_x * edgeLength_y
 
@@ -271,7 +275,6 @@ def constructSystem(paramDict,sliceGroups): #{{{
 
   C = makeDiagBilinear(N,dtau*mu)
   M = makeDiagBilinear(N,dtau*B)
-  K *= (-dtau*t)
   expK = expm2(-1*K)
 
   paramDict['expK'] = expK
@@ -444,7 +447,8 @@ def makeOutputFile(outputName): #{{{
 def finalizeSimulation(paramNo,paramDict,outputName,record_phases,record_field_1,record_field_2): #{{{
   measurementSteps = paramDict['measurementSteps']
   beta = paramDict['beta']
-  t = paramDict['t']
+  tn = paramDict['tn']
+  tnn = paramDict['tnn']
   U = paramDict['U']
   mu = paramDict['mu']
   B = paramDict['B']
@@ -711,7 +715,8 @@ def processConfig(config): #{{{ Process the configuration file
   sysConf = config['system']
   simConf = config['simulation']
 
-  paramDict = {'t':                   sysConf['t']
+  paramDict = {'tn':                  sysConf['tn']
+              ,'tnn':                 sysConf['tnn']
               ,'U':                   sysConf['U']
               ,'edgeLength x':        sysConf['lattice']['edgeLength']['x']
               ,'edgeLength y':        sysConf['lattice']['edgeLength']['y']
@@ -774,7 +779,6 @@ def processConfig(config): #{{{ Process the configuration file
     newpd['lambda2 general']    = lambda2_general
     newpd['lambda2 domainWall'] = lambda2_domainWall
     paramDicts.append(newpd)
-
 
   return paramDicts #}}}
 
