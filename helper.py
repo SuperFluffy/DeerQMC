@@ -2,13 +2,13 @@ import numpy
 
 from itertools import islice
 from numpy.random import choice
-from scipy.linalg import det, expm2, inv, qr, rq,
+from scipy.linalg import det, expm2, inv, qr, rq
 
 from collections import deque
 
 __all__ = ['calcDeterminantPhase', 'calcSign', 'compress_array', 'grouper',
            'makeDiagBilinear', 'makeField', 'makeGreensUDR', 'makeGreensRDU',
-           'makeGreensNaive', 'makeKin1D', 'makeKin2D', 'makePotential',
+           'makeGreensNaive', 'makeHopp1D', 'makeHopp2D', 'makePotential',
            'multiplySlicesStart', 'multiplySlicesEnd', 'phase', 'RDU', 'UDR',
            'timing', 'ParameterError']
 
@@ -78,7 +78,7 @@ def makeField(L,N,spinsSample=None): #{{{
   spacetime = randarray.reshape(L,N)
   return spacetime #}}}
 
-def makeKin1D(n,k): # {{{
+def makeHopp1D(n,k): # {{{
   K  = numpy.eye(n,k=+k,dtype=numpy.float64)
   K += numpy.eye(n,k=-k,dtype=numpy.float64)
 # Set the matrix elements to fulfil the PBC by hand. Has no effect on a 2-site chain
@@ -87,11 +87,11 @@ def makeKin1D(n,k): # {{{
     K += numpy.eye(n,k=-(n-k))
   return K #}}}
 
-def makeKin2D(nx,ny): # 2D hopping matrix for symmetric, square lattices {{{
-  Kx = makeKin1D(nx)
+def makeHopp2D(nx,ny,k): # 2D hopping matrix for symmetric, square lattices {{{
+  Kx = makeHopp1D(nx,k)
   Ix = numpy.eye(nx,dtype=numpy.float64)
 
-  Ky = makeKin1D(ny)
+  Ky = makeHopp1D(ny,k)
   Iy = numpy.eye(ny,dtype=numpy.float64)
 
   K = numpy.kron(Iy,Kx) + numpy.kron(Ky,Ix)

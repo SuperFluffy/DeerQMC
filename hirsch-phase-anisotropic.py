@@ -263,7 +263,7 @@ def constructSystem(paramDict,sliceGroups): #{{{
   spinUp_other = paramDict['spinUp_other']
   spinDn_other = paramDict['spinDn_other']
 
-  K = makeKin2D(edgeLength_x,edgeLength_y)
+  K = makeHopp2D(edgeLength_x,edgeLength_y,1)
 
   N = edgeLength_x * edgeLength_y
 
