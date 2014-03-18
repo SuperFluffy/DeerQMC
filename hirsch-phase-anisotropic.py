@@ -444,7 +444,7 @@ def makeOutputFile(outputName): #{{{
       break
   return outputHandle #}}}
 
-def finalizeSimulation(paramNo,paramDict,outputName,record_phases,record_field_1,record_field_2): #{{{
+def finalizeSimulation(paramDict,outputName,record_phases,record_field_1,record_field_2): #{{{
   measurementSteps = paramDict['measurementSteps']
   beta = paramDict['beta']
   tn = paramDict['tn']
@@ -483,11 +483,10 @@ def finalizeSimulation(paramNo,paramDict,outputName,record_phases,record_field_1
 
   outputFile = makeOutputFile(outputName)
 
-  simGroup = outputFile.create_group(str(paramNo))
-  simGroup.create_dataset("parameters", data=parameters)
-  simGroup.create_dataset("phases", compression='lzf', data=record_phases)
-  simGroup.create_dataset("field 1", compression='lzf', data=record_field_1)
-  simGroup.create_dataset("field 2", compression='lzf', data=record_field_2)
+  outputFile.create_dataset("parameters", data=parameters)
+  outputFile.create_dataset("phases", compression='lzf', data=record_phases)
+  outputFile.create_dataset("field 1", compression='lzf', data=record_field_1)
+  outputFile.create_dataset("field 2", compression='lzf', data=record_field_2)
 
   outputFile.close()
   #}}}
@@ -681,7 +680,7 @@ def setupSimulation(configDict): # Fill the simulation parameter dictionary and 
   logging.info("Maximum number of grouped/wrapped slices m = {0}.".format(m))
   return paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState
 
-def startSimulation(paramNo,configDict,outputName): #{{{
+def startSimulation(configDict,outputName): #{{{
 # Get all the relevenat values out of the dictionary
   try:
     paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState = setupSimulation(configDict)
@@ -695,27 +694,16 @@ def startSimulation(paramNo,configDict,outputName): #{{{
     except LinAlgError as lae:
       logging.error(lae)
     else:
-      finalizeSimulation(paramNo,paramDict,outputName,record_phases,record_field_1,record_field_2)
+      finalizeSimulation(paramDict,outputName,record_phases,record_field_1,record_field_2)
 # }}}
-
-def makeParamElems(elemName, pDict, elemMult): #{{{ Create list of one parameter from configuration
-  if pDict['valueType'] == 'range':
-    start = pDict['start']
-    end = pDict['end']
-    step = pDict['step']
-    res = pDict['resolution']
-    elems = [step/res*elemMult for step in range(start, end+step,step)]
-  elif pDict['valueType'] == 'list':
-    elems = [step*elemMult for step in pDict['list'] ]
-  else:
-    logging.error('Not recognized value in {0}.'.format(elemName))
-  return elems #}}}
 
 def processConfig(config): #{{{ Process the configuration file
   sysConf = config['system']
   simConf = config['simulation']
 
-  paramDict = {'tn':                  sysConf['tn']
+  paramDict = {'beta':                sysConf['beta']
+              ,'idtau':               sysConf['idtau']
+              ,'tn':                  sysConf['tn']
               ,'tnn':                 sysConf['tnn']
               ,'U':                   sysConf['U']
               ,'edgeLength x':        sysConf['lattice']['edgeLength']['x']
@@ -727,14 +715,11 @@ def processConfig(config): #{{{ Process the configuration file
 
   muConf = sysConf['mu']
   muU    = sysConf['U'] if muConf['type'] == 'units of U' else 1
-  mus    = makeParamElems('mu', muConf, muU)
+  mu     = muU * muConf['value']
 
   BConf  = sysConf['B']
   BU     = sysConf['U'] if BConf['type'] == 'units of U' else 1
-  Bs     = makeParamElems('B', BConf, BU)
-
-  betas  = makeParamElems('beta', sysConf['beta'], 1)
-  idtaus = makeParamElems('idtau', sysConf['idtau'], 1)
+  B      = BU * BConf['type']
 
   paramDict['domainWall'] = numpy.array( list( map( ast.literal_eval, sysConf['lattice']['domainWall'] ) ) )
   paramDict['domainWall indices'] = []
@@ -748,39 +733,31 @@ def processConfig(config): #{{{ Process the configuration file
     else:
       paramDict['domainWall indices'].append( paramDict['edgeLength y'] * y + x )
 
-  lambda2s_general_raw    = makeParamElems('lambda2 general', sysConf['lambda2']['general'], 1)
-  lambda2s_domainWall_raw = makeParamElems('lambda2 domainWall', sysConf['lambda2']['domainWall'], 1)
+  lambda2_general    = sysConf['lambda2']['general']
+  lambda2_domainWall = sysConf['lambda2']['domainWall']
 
   if sysConf['lambda2']['general']['complexForm'] == 'polar':
     angle = sysConf['lambda2']['general']['angle']
     rad = numpy.deg2rad(angle)
-    lambda2s_general = [r * complex(numpy.cos(rad),numpy.sin(rad)) for r in lambda2s_general_raw]
+    lambda2_general = lambda2_general * complex(numpy.cos(rad),numpy.sin(rad))
   elif sysConf['lambda2']['general']['complexForm'] == 'rectangular':
-    lambda2s_general = [complex(z) for z in lambda2s_general_raw]
+    lambda2_general = complex(lambda2_general)
   else:
     raise ValueError("Option '{}' for 'complexForm' in 'lambda2' not recognized.".format(sysConf['lambda2']['general']['complexForm']))
 
   if sysConf['lambda2']['domainWall']['complexForm'] == 'polar':
     angle = sysConf['lambda2']['domainWall']['angle']
     rad = numpy.deg2rad(angle)
-    lambda2s_domainWall = [r * complex(numpy.cos(rad),numpy.sin(rad)) for r in lambda2s_domainWall_raw]
+    lambda2_domainWall = lambda2_domainWall * complex(numpy.cos(rad),numpy.sin(rad))
   elif sysConf['lambda2']['domainWall']['complexForm'] == 'rectangular':
-    lambda2s_domainWall = [complex(z) for z in lambda2s_domainWall_raw]
+    lambda2_domainWall = complex(lambda2_domainWall)
   else:
     raise ValueError("Option '{}' for 'complexForm' in 'lambda2' not recognized.".format(sysConf['lambda2']['domainWall']['complexForm']))
 
-  paramDicts = []
-  for mu, B, beta, idtau, lambda2_general, lambda2_domainWall in product(mus, Bs, betas, idtaus, lambda2s_general, lambda2s_domainWall):
-    newpd                       = paramDict.copy()
-    newpd['mu']                 = mu
-    newpd['B']                  = B
-    newpd['beta']               = beta
-    newpd['idtau']              = idtau
-    newpd['lambda2 general']    = lambda2_general
-    newpd['lambda2 domainWall'] = lambda2_domainWall
-    paramDicts.append(newpd)
+  paramDict['lambda2 general'] = lambda2_general
+  paramDict['lambda2 domainWall'] = lambda2_domainWall
 
-  return paramDicts #}}}
+  return paramDict #}}}
 
 def getConfig(inputHandle):
   try:
@@ -792,8 +769,8 @@ def getConfig(inputHandle):
       logging.error("Error position: ({0}:{1})".format(mark.line-1, mark.column-1))
   else:
     inputHandle.close()
-    configDicts = processConfig(config)
-    return configDicts
+    configDict = processConfig(config)
+    return configDict
 
 def main(inputName,outputName): # Controls the entire simulation {{{
   #r.seed(439451005467937294)
@@ -826,15 +803,12 @@ def main(inputName,outputName): # Controls the entire simulation {{{
     logging.info("Logging file name: {0}".format(loggingFile))
 
     try:
-      configDicts = getConfig(inputHandle)
+      configDict = getConfig(inputHandle)
     except IOError as ioe:
       logging.error(ioe)
     else:
-      paramNo = 1
       logging.info("Sets of simulation parameters found in configuration file: {0}".format(len(configDicts)))
-      for configDict in configDicts:
-        startSimulation(paramNo,configDict,outputName)
-        paramNo += 1
+      startSimulation(configDict,outputName)
 #}}}
 
 if __name__ == "__main__":

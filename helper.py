@@ -247,3 +247,16 @@ def checkFlip(p,gamma=None): #{{{
     flip = True
   return flip #}}}
 
+#def makeParamElems(elemName, pDict, elemMult): #{{{ Create list of one parameter from configuration
+#  if pDict['valueType'] == 'range':
+#    start = pDict['start']
+#    end = pDict['end']
+#    step = pDict['step']
+#    res = pDict['resolution']
+#    elems = [step/res*elemMult for step in range(start, end+step,step)]
+#  elif pDict['valueType'] == 'list':
+#    elems = [step*elemMult for step in pDict['list'] ]
+#  else:
+#    logging.error('Not recognized value in {0}.'.format(elemName))
+#  return elems #}}}
+
