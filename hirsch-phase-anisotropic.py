@@ -20,8 +20,9 @@ import h5py
 
 import ast
 
-from helper import *
-
+from helper import grouper
+from math-functions import *
+from support import *
 
 # Construct dtype dtypes {{{
 def construct_parameter_dtype(domainWall):
@@ -44,167 +45,6 @@ def construct_parameter_dtype(domainWall):
                                  ,('domainWall', numpy.int64)
                                  ])
 #}}}
-
-def makeGreensParts(getDeterminant,paramDict,state,sliceCount,sliceGroups): #{{{
-  N = paramDict['N']
-  expK = paramDict['expK']
-
-  det = 0
-  ones = numpy.eye(N)
-
-  no_slices = len(sliceGroups)
-  sliceGroup = sliceGroups[sliceCount-1]
- 
-  # Factors for RDU factorization
-  if sliceCount < no_slices:
-    RL = state['B_left'][sliceCount,0]
-    DL = state['B_left'][sliceCount,1]
-    UL = state['B_left'][sliceCount,2]
-  else: # At the last slice there is no RDU partial product which can be used.
-    RL = numpy.copy(ones)
-    DL = numpy.copy(ones)
-    UL = numpy.copy(ones)
-
-  if sliceCount == 0:
-    UR = numpy.copy(ones)
-    DR = numpy.copy(ones)
-    RR = numpy.copy(ones)
-    RLinv = inv(RL)
-    ULinv = inv(UL)
-    tmpMatrix = numpy.dot(RLinv,ULinv) + DL
-    rL,DL,uL = RDU(tmpMatrix)
-    UL = numpy.dot(uL,UL)
-    RL = numpy.dot(RL,rL)
-    RLinv = inv(RL)
-    DLinv = inv(DL)
-    ULinv = inv(UL)
-    state['G'] = numpy.dot(ULinv,numpy.dot(DLinv,RLinv))
-  else:
-    B = multiplySlicesEnd(N,expK,state['expVs'],sliceGroup)
-    if sliceCount == 1:
-      UR,DR,RR = UDR(B)
-    else:
-      UR = state['B_right'][sliceCount-1,0]
-      DR = state['B_right'][sliceCount-1,1]
-      RR = state['B_right'][sliceCount-1,2]
-      tmpMatrix = numpy.dot(numpy.dot(B,UR),DR)
-      UR,DR,r = UDR(tmpMatrix)
-      RR = numpy.dot(r,RR)
-
-    URinv = inv(UR)
-    ULinv = inv(UL)
-    tmpMatrix = numpy.dot(URinv,ULinv) + numpy.dot(DR,numpy.dot(RR,numpy.dot(RL,DL)))
-    U,D,R = UDR(tmpMatrix)
-
-    Rinv = inv(R)
-    Dinv = inv(D)
-    Uinv = inv(U)
-    state['G'] = numpy.dot(ULinv,numpy.dot(Rinv,numpy.dot(Dinv,numpy.dot(Uinv,URinv))))
-
-  state['B_right'][sliceCount,0] = UR
-  state['B_right'][sliceCount,1] = DR
-  state['B_right'][sliceCount,2] = RR
-
-  if getDeterminant:
-    if sliceCount == 0:
-      detUL = det(UL)
-      detDL = det(DL)
-      detRL = det(RL)
-      det   = detUL*detDL*detRL
-    else:
-      detUL = det(UL)
-      detUR = det(UR)
-      detD  = det(D)
-      detU  = det(U)
-      detR  = det(R)
-      det   = detUL*detUR*detR*detD*detU
-
-  return det #}}}
-
-def initGreens(getPhase,paramDict,expVs,sliceGroups): # Returns a Green's function and the sign of the associated determinant {{{
-  det = 0
-  L = paramDict['L']
-  N = paramDict['N']
-  expK = paramDict['expK']
-  ones = numpy.eye(N,dtype=numpy.complex128)
-  U = numpy.copy(ones)
-  D = numpy.copy(ones)
-  R = numpy.copy(ones)
-
-  no_slices = len(sliceGroups)
-
-# Create the partial matrix products and store them away (in reversed order)
-  B_left  = numpy.empty((no_slices,3,N,N),dtype=numpy.complex128)
-  B_right = numpy.empty((no_slices,3,N,N),dtype=numpy.complex128)
-
-  chunkCount = no_slices - 1
-  for chunk in [sg[::-1] for sg in sliceGroups[::-1]]:
-    B = multiplySlicesStart(N,expK,expVs,chunk)
-    tmpMatrix = numpy.dot(D,numpy.dot(U,B))
-    r,D,U = RDU(tmpMatrix)
-    R = numpy.dot(R,r)
-    B_left[chunkCount,0] = R
-    B_left[chunkCount,1] = D
-    B_left[chunkCount,2] = U
-    chunkCount -= 1
-  Uinv = inv(U)
-  Rinv = inv(R)
-  tmpMatrix = numpy.dot(Rinv,Uinv) + D
-  r,D,u = RDU(tmpMatrix)
-  U = numpy.dot(u,U)
-  R = numpy.dot(R,r)
-
-  Rinv = inv(R)
-  Dinv = inv(D)
-  Uinv = inv(U)
-  G = numpy.dot(Uinv,numpy.dot(Dinv,Rinv))
-
-  state = {'G': G
-          ,'B_left': B_left
-          ,'B_right': B_right
-          ,'expVs': expVs}
-
-  if getPhase:
-    detR,phaseR = calcDeterminantPhase(R)
-    detU,phaseU = calcDeterminantPhase(U)
-    detD,phaseD = calcDeterminantPhase(D)
-    phase       = phaseR*phaseU*phaseD
-
-  return phase,state #}}}
-
-def updateGreensLoop(i,paramDict,state,weightValues): #{{{
-  N = paramDict['N']
-  gamma = weightValues['gamma']
-  det = weightValues['det']
-  newG = numpy.zeros((N,N),dtype=numpy.complex128)
-  coeff = gamma/det
-  G = state['G']
-  for j in range(N):
-    for k in range(N):
-      delta = 1 if j==i else 0
-      newG[j,k] = G[j,k] + G[i,k] * (G[j,i] - delta) * coeff
-  return newG #}}}
-
-def updateGreensVect(i,paramDict,state,weightValues): #{{{
-  N        = paramDict['N']
-  gamma    = weightValues['gamma']
-  det      = weightValues['det']
-  newG     = numpy.zeros((N,N),dtype=numpy.complex128)
-  coeff    = gamma/det
-  delta    = numpy.zeros(N)
-  delta[i] = 1
-  G        = state['G']
-  newG     = G + G[i,:] * (G[:,i,numpy.newaxis] - delta[:,numpy.newaxis]) * coeff
-  return newG #}}}
-
-def updateGreens(i,paramDict,state,weightValues): #{{{ Update scheme chooser
-  return updateGreensVect(i,paramDict,state,weightValues) #}}}
-
-def wrapGreens(expK,l,state): # Propagate the Green's function to the next time slice {{{
-  B    = numpy.dot(expK,state['expVs'][l])
-  Binv = inv(B)
-  newG = numpy.dot(numpy.dot(B,state['G']),Binv)
-  return newG #}}}
 
 def calcRatios(l,i,spacetime,paramDict,upState,downState,which): #{{{
   s = spacetime[l,i]
@@ -268,15 +108,14 @@ def constructSystem(paramDict,sliceGroups): #{{{
   Kn  = (-dtau*tn) *  makeHopp2D(edgeLength_x,edgeLength_y,1)
   Knn = (-dtau*tnn) * makeHopp2D(edgeLength_x,edgeLength_y,2)
   K = Kn + Knn
+  expK = expm2(-1*K)
 
   N = edgeLength_x * edgeLength_y
 
+  C = (dtau*mu) * numpy.eye(N,dtype=numpy.float64)
+  M = (dtau*B)  * numpy.eye(N,dtype=numpy.float64)
+
   paramDict['N'] = N
-
-  C = makeDiagBilinear(N,dtau*mu)
-  M = makeDiagBilinear(N,dtau*B)
-  expK = expm2(-1*K)
-
   paramDict['expK'] = expK
 
   spacetime_1,spacetime_2,expVs_up,expVs_dn = makePotential(paramDict,C,M)
@@ -350,8 +189,8 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
           spacetime_1[l,i] *= -1
           upState['expVs'][l,i,i]   *= val_up_1['delta']
           downState['expVs'][l,i,i] *= val_dn_1['delta']
-          upState['G']   = updateGreens(i,paramDict,upState,val_up_1)
-          downState['G'] = updateGreens(i,paramDict,downState,val_dn_1)
+          upState['G']   = updateGreensV(i,paramDict,upState,val_up_1)
+          downState['G'] = updateGreensV(i,paramDict,downState,val_dn_1)
           weightPhase *= phase(detTot_1)
           accepted["field 1"] += 1
         phases[countPhase] = weightPhase
@@ -368,8 +207,8 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
             spacetime_2[l,i] *= -1
             upState['expVs'][l,i,i]   *= val_up_2['delta']
             downState['expVs'][l,i,i] *= val_dn_2['delta']
-            upState['G']   = updateGreens(i,paramDict,upState,val_up_2)
-            downState['G'] = updateGreens(i,paramDict,downState,val_dn_2)
+            upState['G']   = updateGreensV(i,paramDict,upState,val_up_2)
+            downState['G'] = updateGreensV(i,paramDict,downState,val_dn_2)
             weightPhase *= phase(detTot_2)
             accepted["field 2"] += 1
           phases[countPhase] = weightPhase
@@ -394,17 +233,6 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
       degDn,gDn_old,gDn_new = getGreensMaximumDegeneracy(degDn,gDn_old,gDn_new,downState['G'],Gdn_old)
   return degUp,gUp_old,gUp_new,degDn,gDn_old,gDn_new,phases,accepted
 #}}}
-
-def thermalized(measurements, tolerance=0.01): #{{{ Calculate whether thermalization was reached up to a certain tolerance
-  results = [];
-  totMean = measurements.mean();
-  measIndex = linspace(0, measurements.size-1, measurements.size)
-
-  fitted = polyval(polyfit(measIndex, measurements, 1), measIndex)  # fit measurements
-  percentChange = (fitted[-1] - fitted[0])/totMean
-
-  print(abs(percentChange))
-  return abs(percentChange) < tolerance #}}}
 
 def makeLoggingFile(outputName): #{{{
   saveName = outputName
