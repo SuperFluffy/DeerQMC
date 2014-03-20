@@ -2,18 +2,16 @@ import numpy
 
 from itertools import islice
 from numpy.random import choice
-from scipy.linalg import det, expm2, inv, qr, rq
+from scipy.linalg import expm2
 
 from collections import deque
 
 from math-functions import *
 from helper import grouper
 
-__all__ = ['checkFlip', 'compress_array', 'initGreens', 'makeField',
-           'makeGreensParts', 'makeGreensRDU', 'makeGreensUDR', 'makeGreensNaive',
+__all__ = ['checkFlip', 'compress_array', 'makeField',
            'makeHopp1D', 'makeHopp2D', 'makePotential',
            'multiplySlicesStart', 'multiplySlicesEnd', 'thermalized',
-           'updateGreensL', 'updateGreensV'
            'ParameterError']
 
 class ParameterError(Exception): # Custom exception {{{
@@ -101,6 +99,55 @@ def makePotential(paramDict,C,M): #{{{
   return spacetime_1,spacetime_2,expVs_up,expVs_dn
 # }}}
 
+def constructSystem(paramDict,sliceGroups): #{{{
+  edgeLength_x = paramDict['edgeLength x']
+  edgeLength_y = paramDict['edgeLength y']
+  tn = paramDict['tn']
+  tnn = paramDict['tnn']
+  U = paramDict['U']
+  mu = paramDict['mu']
+  B = paramDict['B']
+  dtau = paramDict['dtau']
+  L = paramDict['L']
+  m = paramDict['m']
+
+  lambda1_general = paramDict['lambda1 general']
+  lambda2_general = paramDict['lambda2 general']
+
+  lambda1_domainWall = paramDict['lambda1 domainWall']
+  lambda2_domainWall = paramDict['lambda2 domainWall']
+
+  spinUp = paramDict['spinUp']
+  spinDn = paramDict['spinDn']
+
+  spinUp_other = paramDict['spinUp_other']
+  spinDn_other = paramDict['spinDn_other']
+
+  Kn  = (-dtau*tn) *  makeHopp2D(edgeLength_x,edgeLength_y,1)
+  Knn = (-dtau*tnn) * makeHopp2D(edgeLength_x,edgeLength_y,2)
+  K = Kn + Knn
+  expK = expm2(-1*K)
+
+  N = edgeLength_x * edgeLength_y
+
+  C = (dtau*mu) * numpy.eye(N,dtype=numpy.float64)
+  M = (dtau*B)  * numpy.eye(N,dtype=numpy.float64)
+
+  paramDict['N'] = N
+  paramDict['expK'] = expK
+
+  spacetime_1,spacetime_2,expVs_up,expVs_dn = makePotential(paramDict,C,M)
+
+  phaseUp,upState   = initGreens(True,paramDict,expVs_up,sliceGroups)
+  phaseDn,downState = initGreens(True,paramDict,expVs_dn,sliceGroups)
+
+  expFactor_general    = numpy.exp((-1) * lambda2_general    * numpy.sum( paramDict['lattice general'] * spacetime_2))
+  expFactor_domainWall = numpy.exp((-1) * lambda2_domainWall * numpy.sum( paramDict['lattice domainWall'] * spacetime_2))
+
+  weightPhase = phaseUp * phaseDn * phase( expFactor_general * expFactor_domainWall )
+
+  return spacetime_1,spacetime_2,weightPhase,upState,downState #}}}
+
 def multiplySlicesStart(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the head. {{{
   B = numpy.eye(N,dtype=numpy.complex128)
   for l in order:
@@ -112,250 +159,6 @@ def multiplySlicesEnd(N,expK,expVs,order): # Multiplies “B_i”s in a given or
   for l in order:
     B = numpy.dot(numpy.dot(expK,expVs[l]),B)
   return B #}}}
-
-def makeGreensUDR(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's function and the sign of the associated determinant {{{
-  det = 0
-  order = deque(range(L))
-  order.rotate(i)
-  order.reverse() # Reverse the order so all the elements get multiplied from the right first
-  orderChunks = grouper(m,order)
-  I = numpy.eye(N,dtype=numpy.complex128)
-  U = numpy.copy(I)
-  D = numpy.copy(I)
-  R = numpy.copy(I)
-  for chunk in orderChunks:
-    B = multiplySlicesEnd(N,expK,expVs,chunk)
-    tmpMatrix = numpy.dot(numpy.dot(B,U),D)
-    U,D,r = UDR(tmpMatrix)
-    R = numpy.dot(r,R)
-  Uinv = inv(U)
-  Rinv = inv(R)
-  tmpMatrix = numpy.dot(Uinv,Rinv) + D
-  u,D,r = UDR(tmpMatrix)
-  U = numpy.dot(U,u)
-  R = numpy.dot(r,R)
-  if getDeterminant:
-    detR=det(R)
-    detU=det(U)
-    detD=det(D)
-    det = detR*detD*detU
-  Rinv = s.linv(R)
-  Dinv = s.linv(D)
-  Uinv = s.linv(U)
-  G = numpy.dot(numpy.dot(Rinv,Dinv),Uinv)
-  return det,G #}}}
-
-def makeGreensRDU(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's function and the sign of the associated determinant {{{
-  det = 0
-  order = deque(range(L))
-  order.rotate(i)
-  orderChunks = grouper(m,order)
-
-  orderChunks = list(orderChunks)
-  numChunks = len(orderChunks)
-
-  I = numpy.eye(N,dtype=numpy.complex128)
-  U = numpy.copy(I)
-  D = numpy.copy(I)
-  R = numpy.copy(I)
-
-  calcChunks = 0
-
-# Create the partial matrix products and store them away (in reversed order)
-  for chunk in orderChunks:
-    B = multiplySlicesStart(N,expK,expVs,chunk)
-    tmpMatrix = numpy.dot(D,numpy.dot(U,B))
-    r,D,U = RDU(tmpMatrix)
-    R = numpy.dot(R,r)
-  Uinv = inv(U)
-  Rinv = inv(R)
-  tmpMatrix = numpy.dot(Rinv,Uinv) + D
-  r,D,u = RDU(tmpMatrix)
-  U = numpy.dot(u,U)
-  R = numpy.dot(R,r)
-  if getDeterminant:
-    detR = det(R)
-    detU = det(U)
-    detD = det(D)
-    det  = detR*detD*detU
-  Rinv = inv(R)
-  Dinv = inv(D)
-  Uinv = inv(U)
-  G = numpy.dot(Uinv,numpy.dot(Dinv,Rinv))
-  return det,G #}}}
-
-def makeGreensNaive(getDeterminant,L,N,expK,expVs,i): # As makeGreensUDR, but without UDR decomposition {{{
-  det = 0
-  order = deque(range(L))
-  order.rotate(i)
-  I = numpy.eye(N,dtype=numpy.complex128)
-  A = numpy.eye(N,dtype=numpy.complex128)
-  for o in order:
-    B = numpy.dot(expK,expVs[o])
-    A = numpy.dot(A,B)
-  O = I + A
-  if getDeterminant:
-    det = det(O)
-  G = inv(O)
-  return det,G #}}}
-
-def makeGreensParts(getDeterminant,paramDict,state,sliceCount,sliceGroups): # Updates the state of the simulation and returns the determinant {{{
-  N = paramDict['N']
-  expK = paramDict['expK']
-
-  det = 0
-  ones = numpy.eye(N)
-
-  no_slices = len(sliceGroups)
-  sliceGroup = sliceGroups[sliceCount-1]
- 
-  # Factors for RDU factorization
-  if sliceCount < no_slices:
-    RL = state['B_left'][sliceCount,0]
-    DL = state['B_left'][sliceCount,1]
-    UL = state['B_left'][sliceCount,2]
-  else: # At the last slice there is no RDU partial product which can be used.
-    RL = numpy.copy(ones)
-    DL = numpy.copy(ones)
-    UL = numpy.copy(ones)
-
-  if sliceCount == 0:
-    UR = numpy.copy(ones)
-    DR = numpy.copy(ones)
-    RR = numpy.copy(ones)
-    RLinv = inv(RL)
-    ULinv = inv(UL)
-    tmpMatrix = numpy.dot(RLinv,ULinv) + DL
-    rL,DL,uL = RDU(tmpMatrix)
-    UL = numpy.dot(uL,UL)
-    RL = numpy.dot(RL,rL)
-    RLinv = inv(RL)
-    DLinv = inv(DL)
-    ULinv = inv(UL)
-    state['G'] = numpy.dot(ULinv,numpy.dot(DLinv,RLinv))
-  else:
-    B = multiplySlicesEnd(N,expK,state['expVs'],sliceGroup)
-    if sliceCount == 1:
-      UR,DR,RR = UDR(B)
-    else:
-      UR = state['B_right'][sliceCount-1,0]
-      DR = state['B_right'][sliceCount-1,1]
-      RR = state['B_right'][sliceCount-1,2]
-      tmpMatrix = numpy.dot(numpy.dot(B,UR),DR)
-      UR,DR,r = UDR(tmpMatrix)
-      RR = numpy.dot(r,RR)
-
-    URinv = inv(UR)
-    ULinv = inv(UL)
-    tmpMatrix = numpy.dot(URinv,ULinv) + numpy.dot(DR,numpy.dot(RR,numpy.dot(RL,DL)))
-    U,D,R = UDR(tmpMatrix)
-
-    Rinv = inv(R)
-    Dinv = inv(D)
-    Uinv = inv(U)
-    state['G'] = numpy.dot(ULinv,numpy.dot(Rinv,numpy.dot(Dinv,numpy.dot(Uinv,URinv))))
-
-  state['B_right'][sliceCount,0] = UR
-  state['B_right'][sliceCount,1] = DR
-  state['B_right'][sliceCount,2] = RR
-
-  if getDeterminant:
-    if sliceCount == 0:
-      detUL = det(UL)
-      detDL = det(DL)
-      detRL = det(RL)
-      det   = detUL*detDL*detRL
-    else:
-      detUL = det(UL)
-      detUR = det(UR)
-      detD  = det(D)
-      detU  = det(U)
-      detR  = det(R)
-      det   = detUL*detUR*detR*detD*detU
-
-  return det #}}}
-
-def initGreens(getPhase,paramDict,expVs,sliceGroups): # Returns a Green's function and the sign of the associated determinant {{{
-  det = 0
-  L = paramDict['L']
-  N = paramDict['N']
-  expK = paramDict['expK']
-  ones = numpy.eye(N,dtype=numpy.complex128)
-  U = numpy.copy(ones)
-  D = numpy.copy(ones)
-  R = numpy.copy(ones)
-
-  no_slices = len(sliceGroups)
-
-# Create the partial matrix products and store them away (in reversed order)
-  B_left  = numpy.empty((no_slices,3,N,N),dtype=numpy.complex128)
-  B_right = numpy.empty((no_slices,3,N,N),dtype=numpy.complex128)
-
-  chunkCount = no_slices - 1
-  for chunk in [sg[::-1] for sg in sliceGroups[::-1]]:
-    B = multiplySlicesStart(N,expK,expVs,chunk)
-    tmpMatrix = numpy.dot(D,numpy.dot(U,B))
-    r,D,U = RDU(tmpMatrix)
-    R = numpy.dot(R,r)
-    B_left[chunkCount,0] = R
-    B_left[chunkCount,1] = D
-    B_left[chunkCount,2] = U
-    chunkCount -= 1
-  Uinv = inv(U)
-  Rinv = inv(R)
-  tmpMatrix = numpy.dot(Rinv,Uinv) + D
-  r,D,u = RDU(tmpMatrix)
-  U = numpy.dot(u,U)
-  R = numpy.dot(R,r)
-
-  Rinv = inv(R)
-  Dinv = inv(D)
-  Uinv = inv(U)
-  G = numpy.dot(Uinv,numpy.dot(Dinv,Rinv))
-
-  state = {'G': G
-          ,'B_left': B_left
-          ,'B_right': B_right
-          ,'expVs': expVs}
-
-  if getPhase:
-    detR,phaseR = determinantPhase(R)
-    detU,phaseU = determinantPhase(U)
-    detD,phaseD = determinantPhase(D)
-    phase       = phaseR*phaseU*phaseD
-
-  return phase,state #}}}
-
-def updateGreensL(i,paramDict,state,weightValues): #{{{
-  N = paramDict['N']
-  gamma = weightValues['gamma']
-  det = weightValues['det']
-  newG = numpy.zeros((N,N),dtype=numpy.complex128)
-  coeff = gamma/det
-  G = state['G']
-  for j in range(N):
-    for k in range(N):
-      delta = 1 if j==i else 0
-      newG[j,k] = G[j,k] + G[i,k] * (G[j,i] - delta) * coeff
-  return newG #}}}
-
-def updateGreensV(i,paramDict,state,weightValues): #{{{
-  N        = paramDict['N']
-  gamma    = weightValues['gamma']
-  det      = weightValues['det']
-  newG     = numpy.zeros((N,N),dtype=numpy.complex128)
-  coeff    = gamma/det
-  delta    = numpy.zeros(N)
-  delta[i] = 1
-  G        = state['G']
-  newG     = G + G[i,:] * (G[:,i,numpy.newaxis] - delta[:,numpy.newaxis]) * coeff
-  return newG #}}}
-
-def wrapGreens(expK,l,state): # Propagate the Green's function to the next time slice {{{
-  B    = numpy.dot(expK,state['expVs'][l])
-  Binv = inv(B)
-  newG = numpy.dot(numpy.dot(B,state['G']),Binv)
-  return newG #}}}
 
 def checkFlip(p,gamma=None): #{{{
   r = p / (1+p)

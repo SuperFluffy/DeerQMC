@@ -2,6 +2,10 @@
 Some useful general functions.
 """
 
+import numpy
+import time
+from itertools import islice
+
 __all__ = ['timing', 'grouper']
 
 def timing(func): # Timing decorator {{{

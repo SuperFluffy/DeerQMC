@@ -21,7 +21,6 @@ import h5py
 import ast
 
 from helper import grouper
-from math-functions import *
 from support import *
 
 # Construct dtype dtypes {{{
@@ -80,67 +79,6 @@ def calcRatios(l,i,spacetime,paramDict,upState,downState,which): #{{{
   #detTot = val_up['det'] * val_dn['det'] * numpy.exp(-1*(spinUp+spinDn) * s * lmbd)
   detTot = val_up['det'] * val_dn['det'] * numpy.exp((spinUp+spinDn) * s * lmbd)
   return val_up, val_dn, detTot #}}}
-
-def constructSystem(paramDict,sliceGroups): #{{{
-  edgeLength_x = paramDict['edgeLength x']
-  edgeLength_y = paramDict['edgeLength y']
-  tn = paramDict['tn']
-  tnn = paramDict['tnn']
-  U = paramDict['U']
-  mu = paramDict['mu']
-  B = paramDict['B']
-  dtau = paramDict['dtau']
-  L = paramDict['L']
-  m = paramDict['m']
-
-  lambda1_general = paramDict['lambda1 general']
-  lambda2_general = paramDict['lambda2 general']
-
-  lambda1_domainWall = paramDict['lambda1 domainWall']
-  lambda2_domainWall = paramDict['lambda2 domainWall']
-
-  spinUp = paramDict['spinUp']
-  spinDn = paramDict['spinDn']
-
-  spinUp_other = paramDict['spinUp_other']
-  spinDn_other = paramDict['spinDn_other']
-
-  Kn  = (-dtau*tn) *  makeHopp2D(edgeLength_x,edgeLength_y,1)
-  Knn = (-dtau*tnn) * makeHopp2D(edgeLength_x,edgeLength_y,2)
-  K = Kn + Knn
-  expK = expm2(-1*K)
-
-  N = edgeLength_x * edgeLength_y
-
-  C = (dtau*mu) * numpy.eye(N,dtype=numpy.float64)
-  M = (dtau*B)  * numpy.eye(N,dtype=numpy.float64)
-
-  paramDict['N'] = N
-  paramDict['expK'] = expK
-
-  spacetime_1,spacetime_2,expVs_up,expVs_dn = makePotential(paramDict,C,M)
-
-  phaseUp,upState   = initGreens(True,paramDict,expVs_up,sliceGroups)
-  phaseDn,downState = initGreens(True,paramDict,expVs_dn,sliceGroups)
-
-  expFactor_general    = numpy.exp((-1) * lambda2_general    * numpy.sum( paramDict['lattice general'] * spacetime_2))
-  expFactor_domainWall = numpy.exp((-1) * lambda2_domainWall * numpy.sum( paramDict['lattice domainWall'] * spacetime_2))
-
-  weightPhase = phaseUp * phaseDn * phase( expFactor_general * expFactor_domainWall )
-
-  return spacetime_1,spacetime_2,weightPhase,upState,downState #}}}
-
-def getGreensMaximumDegeneracy(deg,g_old,g_new,G1,G2): #{{{ Highest difference of an element in the last wrapped Green's function compared to the one calculated from scratch
-  dims = G1.shape
-  degMatrix = numpy.absolute((G2-G1)/G1)
-  deg_index = numpy.argmax(degMatrix)
-  deg_index = numpy.unravel_index(deg_index,dims)
-
-  deg_new = degMatrix[deg_index]
-  if deg_new > deg:
-    return deg_new,G2[deg_index],G1[deg_index]
-  else:
-    return deg,g_old,g_new #}}}
 
 def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState): # Sweep and measure all time slices, return measurements and new sign/Greens' functions {{{
 # Sweep over time slices and lattice sites.
@@ -348,7 +286,7 @@ def runSimulation(paramDict, sliceGroups, spacetime_1, spacetime_2, weightPhase,
 
   for i in range(no_therm):
     degUp,gUp_old,gUp_new,degDn,gDn_old,gDn_new,phases,accepted = sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState)
-    upState = initGreens(False,paramDict,upState['expVs'],sliceGroups)[1]
+    upState   = initGreens(False,paramDict,upState['expVs'],sliceGroups)[1]
     downState = initGreens(False,paramDict,downState['expVs'],sliceGroups)[1]
     weightPhase = phases[-1]
     if degUp > degUp_save:
