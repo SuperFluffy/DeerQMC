@@ -84,12 +84,9 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
 # Sweep over time slices and lattice sites.
 # Time slices are iterated in the direction [L,L-1,...,1],
 # as per M = 1 + B(1) B(2) ... B(L-1) B(L).
-  degUp   = 0.0
-  degDn   = 0.0
-  gUp_old = 0.0
-  gUp_new = 0.0
-  gDn_old = 0.0
-  gDn_new = 0.0
+
+  degeneracy = {'up': {'value': 0.0, 'old element': 0.0, 'new element': 0}
+               ,'down': {'value' 0.0, 'old element': 0.0, 'new element': 0}
 
 # Unwrap the necessary parameters
   L = paramDict['L']
@@ -167,9 +164,11 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
       makeGreensParts(False,paramDict,upState,sliceCount,sliceGroups)
       makeGreensParts(False,paramDict,downState,sliceCount,sliceGroups)
 
-      degUp,gUp_old,gUp_new = getGreensMaximumDegeneracy(degUp,gUp_old,gUp_new,upState['G'],Gup_old)
-      degDn,gDn_old,gDn_new = getGreensMaximumDegeneracy(degDn,gDn_old,gDn_new,downState['G'],Gdn_old)
-  return degUp,gUp_old,gUp_new,degDn,gDn_old,gDn_new,phases,accepted
+      #degUp,gUp_old,gUp_new = getGreensMaximumDegeneracy(degUp,gUp_old,gUp_new,upState['G'],Gup_old)
+      #degDn,gDn_old,gDn_new = getGreensMaximumDegeneracy(degDn,gDn_old,gDn_new,downState['G'],Gdn_old)
+      degeneracy['up']   =  greensDegeneracy(degeneracy['up'], Gup_old, upState['G'])
+      degeneracy['down'] =  greensDegeneracy(degeneracy['down'], Gdn_old, downState['G'])
+  return degeneracy,phases,accepted
 #}}}
 
 def makeLoggingFile(outputName): #{{{
@@ -285,18 +284,18 @@ def runSimulation(paramDict, sliceGroups, spacetime_1, spacetime_2, weightPhase,
   totalAccepted = {'field 1':0, 'field 2':0}
 
   for i in range(no_therm):
-    degUp,gUp_old,gUp_new,degDn,gDn_old,gDn_new,phases,accepted = sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState)
+    degeneracies,phases,accepted = sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState)
     upState   = initGreens(False,paramDict,upState['expVs'],sliceGroups)[1]
     downState = initGreens(False,paramDict,downState['expVs'],sliceGroups)[1]
     weightPhase = phases[-1]
-    if degUp > degUp_save:
-      degUp_save = degUp
-      gUp_old_save = gUp_old
-      gUp_new_save = gUp_new
-    if degDn > degDn_save:
-      degDn_save = degDn
-      gDn_old_save = gDn_old
-      gDn_new_save = gDn_new
+    if degeneracies['up']['value'] > degUp_save:
+      degUp_save = degeneracies['up']['value']
+      gUp_old_save = degeneracies['up']['old element']
+      gUp_new_save = degeneracies['up']['new element']
+    if degeneracies['down']['value'] > degDn_save:
+      degDn_save = degeneracies['down']['value']
+      gDn_old_save = degeneracies['down']['old element']
+      gDn_new_save = degeneracies['down']['new element']
 
 # Ensure there is at least one step grouped
   tenth = int(no_meas/10)
