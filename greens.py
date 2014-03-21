@@ -4,9 +4,10 @@ General code pertaining to creating, updating, and propagating Greens functions.
 
 import numpy
 
+from collections import deque
 from scipy import det, inv
 
-from helper import maximumDegeneracy
+from helper import grouper,maximumDegeneracy
 from math-functions import determinantPhase, RDU, UDR
 
 __all__ = ['initGreens','makeGreensParts','updateGreensV','wrapGreens']
@@ -180,7 +181,7 @@ Propagates the Green's function to the next time slice using “wrapping”.
   newG = numpy.dot(numpy.dot(B,state['G']),Binv)
   return newG #}}}
 
-def greensDegeneracy(degeneracyDict,A,B):
+def greensDegeneracy(degeneracyDict,A,B): #{{{
 """
 Calculates the degeneracy between two matrices A, B by looking at the element
 with the largest relative difference. It then compares it to the degeneracy of
@@ -191,7 +192,7 @@ with the elements it was calculated from.
   if degeneracy_new > degeneracyDict['value']
     return {'value': degeneracy_new, 'old element': A[ix], 'new element': B[ix]}
   else:
-    return degeneracyDict
+    return degeneracyDict #}}}
 
 """
 The below functions are kept for reference, but are not used in the simulation, because

@@ -2,11 +2,9 @@
 
 import numpy 
 
-from itertools    import count, product
+from itertools    import count
 from math         import floor
-from numpy.random import random
-from scipy        import linspace, polyval, polyfit
-from scipy.linalg import det, expm2, inv, LinAlgError
+from scipy.linalg import LinAlgError
 
 import logging
 import yaml
@@ -20,6 +18,7 @@ import h5py
 
 import ast
 
+from hamiltonian import makeHamiltonian
 from helper import grouper
 from support import *
 
@@ -440,7 +439,7 @@ def setupSimulation(configDict): # Fill the simulation parameter dictionary and 
 
   sliceGroups = list(grouper(m,range(L)[::-1]))
 
-  spacetime_1,spacetime_2,weightPhase,upState,downState = constructSystem(paramDict,sliceGroups)
+  spacetime_1,spacetime_2,weightPhase,upState,downState = makeHamiltonian(paramDict,sliceGroups)
 
   logging.info("Maximum number of grouped/wrapped slices m = {0}.".format(m))
   return paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState
