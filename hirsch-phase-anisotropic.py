@@ -439,7 +439,18 @@ def setupSimulation(configDict): # Fill the simulation parameter dictionary and 
 
   sliceGroups = list(grouper(m,range(L)[::-1]))
 
-  spacetime_1,spacetime_2,weightPhase,upState,downState = makeHamiltonian(paramDict,sliceGroups)
+  #spacetime_1,spacetime_2,weightPhase,upState,downState = makeHamiltonian(paramDict,sliceGroups)
+  expK, spacetime_1,spacetime_2,expVs_up, expVs_dn = makeHamiltonian(paramDict)
+
+  paramDict['expK'] = expK
+
+  phaseUp,upState   = initGreens(True,paramDict,expVs_up,sliceGroups)
+  phaseDn,downState = initGreens(True,paramDict,expVs_dn,sliceGroups)
+
+  expFactor_general    = numpy.exp((-1) * lambda2_general    * numpy.sum( paramDict['lattice general'] * spacetime_2))
+  expFactor_domainWall = numpy.exp((-1) * lambda2_domainWall * numpy.sum( paramDict['lattice domainWall'] * spacetime_2))
+
+  weightPhase = phaseUp * phaseDn * phase( expFactor_general * expFactor_domainWall )
 
   logging.info("Maximum number of grouped/wrapped slices m = {0}.".format(m))
   return paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState
@@ -476,6 +487,8 @@ def processConfig(config): #{{{ Process the configuration file
               ,'thermalizationSteps': simConf['steps']['thermalization']
               ,'measurementSteps':    simConf['steps']['measurements']
               }
+
+  paramDict['N'] = paramDict['edgeLength x'] * paramDict['edgeLength y']
 
   muConf = sysConf['mu']
   muU    = sysConf['U'] if muConf['type'] == 'units of U' else 1

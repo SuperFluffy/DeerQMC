@@ -72,21 +72,19 @@ def makePotential(paramDict,C,M): #{{{
   return spacetime_1,spacetime_2,expVs_up,expVs_dn
 # }}}
 
-def makeHamiltonian(paramDict,sliceGroups): #{{{
+def makeHamiltonian(paramDict): #{{{
 """
 This function constructs all the Hamiltonian describing the system from the
 quantities stored in the parameter dictionary.
 """
   edgeLength_x = paramDict['edgeLength x']
   edgeLength_y = paramDict['edgeLength y']
+  N = paramDict['N']
   tn = paramDict['tn']
   tnn = paramDict['tnn']
-  U = paramDict['U']
   mu = paramDict['mu']
   B = paramDict['B']
   dtau = paramDict['dtau']
-  L = paramDict['L']
-  m = paramDict['m']
 
   lambda1_general = paramDict['lambda1 general']
   lambda2_general = paramDict['lambda2 general']
@@ -105,22 +103,9 @@ quantities stored in the parameter dictionary.
   K = Kn + Knn
   expK = expm2(-1*K)
 
-  N = edgeLength_x * edgeLength_y
-
   C = (dtau*mu) * numpy.eye(N,dtype=numpy.float64)
   M = (dtau*B)  * numpy.eye(N,dtype=numpy.float64)
 
-  paramDict['N'] = N
-  paramDict['expK'] = expK
-
   spacetime_1,spacetime_2,expVs_up,expVs_dn = makePotential(paramDict,C,M)
 
-  phaseUp,upState   = initGreens(True,paramDict,expVs_up,sliceGroups)
-  phaseDn,downState = initGreens(True,paramDict,expVs_dn,sliceGroups)
-
-  expFactor_general    = numpy.exp((-1) * lambda2_general    * numpy.sum( paramDict['lattice general'] * spacetime_2))
-  expFactor_domainWall = numpy.exp((-1) * lambda2_domainWall * numpy.sum( paramDict['lattice domainWall'] * spacetime_2))
-
-  weightPhase = phaseUp * phaseDn * phase( expFactor_general * expFactor_domainWall )
-
-  return spacetime_1,spacetime_2,weightPhase,upState,downState #}}}
+  return expK, spacetime_1, spacetime_2, expVs_up, expVs_dn #}}}
