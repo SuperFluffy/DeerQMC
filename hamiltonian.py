@@ -50,12 +50,8 @@ def makePotential(paramDict,C,M): #{{{
   spacetime_1 = makeField(L,N)
   spacetime_2 = makeField(L,N)
 
-  lattice_domainWall = [0] * N
-  for i in paramDict['domainWall indices']:
-    lattice_domainWall[i] = 1
-
-  lattice_general = numpy.array([x^1 for x in lattice_domainWall])
-  lattice_domainWall = numpy.array(lattice_domainWall)
+  lattice_general = paramDict['lattice general']
+  lattice_domainWall = paramDict['lattice domainWall']
 
   V1  = lambda1_general    * numpy.array([numpy.diag(space) for space in (lattice_general * spacetime_1)],dtype=numpy.complex128)
   V1 += lambda1_domainWall * numpy.array([numpy.diag(space) for space in (lattice_domainWall * spacetime_1)],dtype=numpy.complex128)
@@ -65,9 +61,6 @@ def makePotential(paramDict,C,M): #{{{
 
   expVs_up = numpy.array([expm2(spinUp*v1 + spinUp_other * v2 + C + M) for (v1,v2) in zip(V1,V2)])
   expVs_dn = numpy.array([expm2(spinDn*v1 + spinDn_other * v2 + C - M) for (v1,v2) in zip(V1,V2)])
-
-  paramDict['lattice general']    = lattice_general
-  paramDict['lattice domainWall'] = lattice_domainWall
 
   return spacetime_1,spacetime_2,expVs_up,expVs_dn
 # }}}

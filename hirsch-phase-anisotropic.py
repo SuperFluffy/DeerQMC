@@ -392,7 +392,7 @@ def runSimulation(paramDict, sliceGroups, spacetime_1, spacetime_2, weightPhase,
   return record_phases, record_field_1, record_field_2
 #}}}
 
-def setupSimulation(configDict): # Fill the simulation parameter dictionary and construct all matrices
+def setupSimulation(configDict): # Fill the simulation parameter dictionary and construct all matrices {{{
   paramDict = configDict.copy()
 
   U = paramDict['U']
@@ -439,6 +439,16 @@ def setupSimulation(configDict): # Fill the simulation parameter dictionary and 
 
   sliceGroups = list(grouper(m,range(L)[::-1]))
 
+  lattice_domainWall = [0] * N
+  for i in paramDict['domainWall indices']:
+    lattice_domainWall[i] = 1
+
+  lattice_general = numpy.array([x^1 for x in lattice_domainWall])
+  lattice_domainWall = numpy.array(lattice_domainWall)
+
+  paramDict['lattice general']    = lattice_general
+  paramDict['lattice domainWall'] = lattice_domainWall
+
   #spacetime_1,spacetime_2,weightPhase,upState,downState = makeHamiltonian(paramDict,sliceGroups)
   expK, spacetime_1,spacetime_2,expVs_up, expVs_dn = makeHamiltonian(paramDict)
 
@@ -453,7 +463,7 @@ def setupSimulation(configDict): # Fill the simulation parameter dictionary and 
   weightPhase = phaseUp * phaseDn * phase( expFactor_general * expFactor_domainWall )
 
   logging.info("Maximum number of grouped/wrapped slices m = {0}.".format(m))
-  return paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState
+  return paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,downState #}}}
 
 def startSimulation(configDict,outputName): #{{{
 # Get all the relevenat values out of the dictionary
