@@ -11,7 +11,7 @@ class ParameterError(Exception): # Custom exception {{{
 
 def compress_array(A): # Only chains of up to 64 elements {{{
   spinSpecies = [-1,+1] # Only two spin-species
-  testSample = numpy.invert(numpy.in1d(A,spinsSample))
+  testSample = numpy.in1d(A,spinsSample,invert=True)
   ixWrong = numpy.where(testsample)[0]
   if A.size > 64:
     raise ValueError("Size of {0} of input array too large for compression.".format(A.size))
