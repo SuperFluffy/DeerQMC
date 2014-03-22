@@ -1,6 +1,6 @@
 import numpy 
 
-from math-functions import *
+from math_functions import *
 
 __all__ = ['checkFlip', 'compress_array',
            'multiplySlicesStart', 'multiplySlicesEnd', 'thermalized',
@@ -10,11 +10,16 @@ class ParameterError(Exception): # Custom exception {{{
   pass #}}}
 
 def compress_array(A): # Only chains of up to 64 elements {{{
-  spinSpecies = [-1,+1] # Only two spin-species
+'''
+Compresses a binary array like [0,1,0,1] into an unsigned integer like 0101 by
+setting the appropriate bits.
+'''
+
+  spinSpecies = [-1,+1]
   testSample = numpy.in1d(A,spinsSample,invert=True)
   ixWrong = numpy.where(testsample)[0]
   if A.size > 64:
-    raise ValueError("Size of {0} of input array too large for compression.".format(A.size))
+    raise ValueError("Size of {0} of input array too large for compression into a uint64.".format(A.size))
   elif ixWrong.size > 0:
     raise ValueError("Unknown spin species' in lattice: {0}".format(', '.join(map(', ', numpy.unique(A[ixWrong])))))
   else:

@@ -8,7 +8,7 @@ from collections import deque
 from scipy import det, inv
 
 from helper import grouper,maximumDegeneracy
-from math-functions import determinantPhase, RDU, UDR
+from math_functions import determinantPhase, RDU, UDR
 
 __all__ = ['initGreens','makeGreensParts','updateGreensV','wrapGreens']
 
