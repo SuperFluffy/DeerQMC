@@ -203,7 +203,7 @@ def makeGreensUDR(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's functi
     order = deque(range(L))
     order.rotate(i)
     order.reverse() # Reverse the order so all the elements get multiplied from the right first
-    orderChunks = grouper(m,order)
+    orderChunks = grouper(order,m)
     I = numpy.eye(N,dtype=numpy.complex128)
     U = numpy.copy(I)
     D = numpy.copy(I)
@@ -234,7 +234,7 @@ def makeGreensRDU(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's functi
     det = 0
     order = deque(range(L))
     order.rotate(i)
-    orderChunks = grouper(m,order)
+    orderChunks = grouper(order,m)
 
     orderChunks = list(orderChunks)
     numChunks = len(orderChunks)

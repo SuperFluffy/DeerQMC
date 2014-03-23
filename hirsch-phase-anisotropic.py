@@ -300,7 +300,7 @@ def runSimulation(paramDict, sliceGroups, spacetime_1, spacetime_2, weightPhase,
     tenth = int(no_meas/10)
     if tenth < 1:
         tenth = 1
-    measGroups = list(grouper(tenth,range(no_meas)))
+    measGroups = list(grouper(range(no_meas),tenth))
 
     startTime = time.time()
     startTime_format = time.localtime(startTime)
@@ -437,7 +437,7 @@ def setupSimulation(configDict): # Fill the simulation parameter dictionary and 
         paramDict['spinUp_other'] = +1
         paramDict['spinDn_other'] = +1
 
-    sliceGroups = list(grouper(m,range(L)[::-1]))
+    sliceGroups = list(grouper(range(L)[::-1],m))
 
     lattice_domainWall = [0] * N
     for i in paramDict['domainWall indices']:
