@@ -1,4 +1,6 @@
 import numpy
+from ast import literal_eval
+from collections import defaultdict
 from numbers import Number
 
 def translateComplex(num):
@@ -40,8 +42,6 @@ def processConfig(config): #{{{
                 ,'tn':                  sysConf['tn']
                 ,'tnn':                 sysConf['tnn']
                 ,'U':                   sysConf['U']
-                ,'x':                   sysConf['lattice']['edgeLength']['x']
-                ,'y':                   sysConf['lattice']['edgeLength']['y']
                 ,'thermalizationSteps': simConf['steps']['thermalization']
                 ,'measurementSteps':    simConf['steps']['measurements']
                 }
@@ -56,20 +56,29 @@ def processConfig(config): #{{{
     BU     = sysConf['U'] if BConf['type'] == 'units of U' else 1
     B      = BU * BConf['type']
 
-    paramDict['domainWall'] = numpy.array( list( map( ast.literal_eval, sysConf['lattice']['domainWall'] ) ) )
-    paramDict['domainWall indices'] = []
-
-    # Calculate the indices of the domain wall nodes
-    for (x,y) in paramDict['domainWall']:
-        if x > paramDict['x']:
-            raise ValueError("Coordinate {0} in x direction exceeds lattice length {1}".format(x,paramDict['y']))
-        elif y > paramDict['y']:
-            raise ValueError("Coordinate {0} in y direction exceeds lattice length {1}".format(y,paramDict['y']))
-        else:
-            paramDict['domainWall indices'].append( paramDict['y'] * y + x )
-
     lambda2_gen = readComplex(paramDict['system']['lambda2']['values'])
     lambda2_dict = dict(enumerate(lambda2_gen))
+
+    paramDict['domainWall indices'] = defaultdict(list)
+
+    lattice_type = sysConf['lattice']['type'] 
+
+    # Calculate the indices of the domain wall nodes
+    if lattice_type == 'parameter':
+        paramDict['x'] = sysConf['lattice']['edgeLength']['x']
+        paramDict['y'] = sysConf['lattice']['edgeLength']['y']
+        paramDict['domainWall'] = list(map(literal_eval,sysConf['lattice']['domainWall']))
+        for i,(x,y) in paramDict['domainWall']:
+            if x > paramDict['x']:
+                raise ValueError("Coordinate {0} in x direction exceeds lattice length {1}".format(x,paramDict['x']))
+            elif y > paramDict['y']:
+                raise ValueError("Coordinate {0} in y direction exceeds lattice length {1}".format(y,paramDict['y']))
+            else:
+                paramDict['domainWall indices'][i].append( paramDict['y'] * y + x )
+    elif lattice_type == 'file':
+        # Code to open and read the lattice file.
+    else:
+        raise ValueError("No such option for lattice: {0}".format(lattice_type))
 
     paramDict['lambda2 dictionary'] = lambda2_dict
 
