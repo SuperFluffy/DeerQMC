@@ -40,14 +40,13 @@ def processConfig(config): #{{{
                 ,'tn':                  sysConf['tn']
                 ,'tnn':                 sysConf['tnn']
                 ,'U':                   sysConf['U']
-                ,'edgeLength x':        sysConf['lattice']['edgeLength']['x']
-                ,'edgeLength y':        sysConf['lattice']['edgeLength']['y']
-                ,'useLambda2':          simConf['useLambda2']
+                ,'x':                   sysConf['lattice']['edgeLength']['x']
+                ,'y':                   sysConf['lattice']['edgeLength']['y']
                 ,'thermalizationSteps': simConf['steps']['thermalization']
                 ,'measurementSteps':    simConf['steps']['measurements']
                 }
 
-    paramDict['N'] = paramDict['edgeLength x'] * paramDict['edgeLength y']
+    paramDict['N'] = paramDict['x'] * paramDict['y']
 
     muConf = sysConf['mu']
     muU    = sysConf['U'] if muConf['type'] == 'units of U' else 1
@@ -62,24 +61,12 @@ def processConfig(config): #{{{
 
     # Calculate the indices of the domain wall nodes
     for (x,y) in paramDict['domainWall']:
-        if x > paramDict['edgeLength x']:
-            raise ValueError("Coordinate {0} in x direction exceeds lattice length {1}".format(x,paramDict['edgeLength y']))
-        elif y > paramDict['edgeLength y']:
-            raise ValueError("Coordinate {0} in y direction exceeds lattice length {1}".format(y,paramDict['edgeLength y']))
+        if x > paramDict['x']:
+            raise ValueError("Coordinate {0} in x direction exceeds lattice length {1}".format(x,paramDict['y']))
+        elif y > paramDict['y']:
+            raise ValueError("Coordinate {0} in y direction exceeds lattice length {1}".format(y,paramDict['y']))
         else:
-            paramDict['domainWall indices'].append( paramDict['edgeLength y'] * y + x )
-
-    lambda2_general    = sysConf['lambda2']['general']
-    lambda2_domainWall = sysConf['lambda2']['domainWall']
-
-    if sysConf['lambda2']['general']['complexForm'] == 'polar':
-        angle = sysConf['lambda2']['general']['angle']
-        rad = numpy.deg2rad(angle)
-        lambda2_general = lambda2_general * complex(numpy.cos(rad),numpy.sin(rad))
-    elif sysConf['lambda2']['general']['complexForm'] == 'rectangular':
-        lambda2_general = complex(lambda2_general)
-    else:
-        raise ValueError("Option '{}' for 'complexForm' in 'lambda2' not recognized.".format(sysConf['lambda2']['general']['complexForm']))
+            paramDict['domainWall indices'].append( paramDict['y'] * y + x )
 
     lambda2_gen = readComplex(paramDict['system']['lambda2']['values'])
     lambda2_dict = dict(enumerate(lambda2_gen))
