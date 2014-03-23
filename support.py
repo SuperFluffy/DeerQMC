@@ -1,5 +1,6 @@
 import numpy 
 
+from math import ceil
 from math_functions import *
 
 __all__ = ['checkFlip', 'compress_array',
@@ -11,23 +12,20 @@ class ParameterError(Exception): # Custom exception {{{
 
 def compress_array(A): # Only chains of up to 64 elements {{{
     """
-    Compresses a binary array like [0,1,0,1] into an unsigned integer like 0101 by
-    setting the appropriate bits.
+    Compresses a binary array like [0,1,0,1] or ['a','b','a','b'] into an
+    unsigned integer with padding, like 01010000 by setting the appropriate
+    bits.
     """
-    spinSpecies = [-1,+1]
-    testSample = numpy.in1d(A,spinSpecies,invert=True)
-    ixWrong = numpy.where(testSample)[0]
-    if A.size > 64:
-        raise ValueError("Size of {0} of input array too large for compression into a uint64.".format(A.size))
-    elif ixWrong.size > 0:
-        raise ValueError("Unknown spin species' in lattice: {0}".format(', '.join(map(', ', numpy.unique(A[ixWrong])))))
+    uniqueElements = numpy.unique(A)
+    if uniqueElements.size > 2:
+        raise ValueError("Array contains more than two unique elements: {0}".format(', '.join(map(', ', uniqueElements))))
     else:
-        B = numpy.copy(A)
-        B[ A==(-1) ] = 0
-        C = numpy.zeros(64,dtype='u8')
-        C[0:(B.size)] = B
-        D = numpy.packbits(C)
-    return D
+        needed_uints = ceil(A.size/64)
+        B = numpy.zeros(needed_uints * 64,dtype='u1')
+        B[ A==uniqueElements[0] ] = 0 # Translate the two unique elements in the
+        B[ A==uniqueElements[1] ] = 1 # argument to 0, 1.
+        D = numpy.packbits(B)
+    return D.view('u8'), {uniqueElements[0]: 0, uniqueElements[1]: 1}
 #}}}
 
 def multiplySlicesStart(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the head. {{{
