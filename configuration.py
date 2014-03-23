@@ -1,4 +1,31 @@
 import numpy
+from numbers import Number
+
+def translateComplex(num):
+    '''
+    Tries converting a string like '1+1j' or a tuple like (1,45) into a complex
+    number. The tuple is given in spherical form, z = r·exp(iφ); e.g. above, 
+    r = 1, φ=45.
+    '''
+    try:
+        return complex(num)
+    except (ValueError, TypeError):
+        if len(num) != 2:
+            raise ValueError("Value not given as a tuple: {0}. Spherical form of complex number cannot be parsed.".format(num))
+        elif not all(isinstance(x,Number) for x in num):
+            raise ValueError("Tuple not an instance of Number: {0}.".format(num))
+        else:
+            rad = numpy.deg2rad(num[1])
+            return num[0] * complex(numpy.cos(rad), numpy.sin(rad))
+
+def readComplex(config_values):
+    '''
+    Transforms a list of values from a Yaml configuration file to a list of
+    complex numbers, e.g.:
+    ['1+2j', (1,90), (1,45), '3+3j'] -> [(1+2j), (0+1j), (0.707+0.707j), (3+3j)]
+    '''
+    for v in config_values:
+        yield translateComplex(v)
 
 def processConfig(config): #{{{
     """
@@ -54,16 +81,9 @@ def processConfig(config): #{{{
     else:
         raise ValueError("Option '{}' for 'complexForm' in 'lambda2' not recognized.".format(sysConf['lambda2']['general']['complexForm']))
 
-    if sysConf['lambda2']['domainWall']['complexForm'] == 'polar':
-        angle = sysConf['lambda2']['domainWall']['angle']
-        rad = numpy.deg2rad(angle)
-        lambda2_domainWall = lambda2_domainWall * complex(numpy.cos(rad),numpy.sin(rad))
-    elif sysConf['lambda2']['domainWall']['complexForm'] == 'rectangular':
-        lambda2_domainWall = complex(lambda2_domainWall)
-    else:
-        raise ValueError("Option '{}' for 'complexForm' in 'lambda2' not recognized.".format(sysConf['lambda2']['domainWall']['complexForm']))
+    lambda2_gen = readComplex(paramDict['system']['lambda2']['values'])
+    lambda2_dict = dict(enumerate(lambda2_gen))
 
-    paramDict['lambda2 general'] = lambda2_general
-    paramDict['lambda2 domainWall'] = lambda2_domainWall
+    paramDict['lambda2 dictionary'] = lambda2_dict
 
     return paramDict #}}}
