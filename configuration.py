@@ -2,32 +2,47 @@ import numpy
 from ast import literal_eval
 from collections import defaultdict
 from numbers import Number
+from yaml import load
 
-def translateComplex(num):
-    '''
-    Tries converting a string like '1+1j' or a tuple like (1,45) into a complex
-    number. The tuple is given in spherical form, z = r·exp(iφ); e.g. above, 
-    r = 1, φ=45.
-    '''
-    try:
-        return complex(num)
-    except (ValueError, TypeError):
-        if len(num) != 2:
-            raise ValueError("Value not given as a tuple: {0}. Spherical form of complex number cannot be parsed.".format(num))
-        elif not all(isinstance(x,Number) for x in num):
-            raise ValueError("Tuple not an instance of Number: {0}.".format(num))
-        else:
-            rad = numpy.deg2rad(num[1])
-            return num[0] * complex(numpy.cos(rad), numpy.sin(rad))
+__all__=['getConfig']
 
-def readComplex(config_values):
+def translateComplex(num): #{{{
+    '''
+    Tries converting a tuple like (1,45) into a complex number. The tuple is
+    given in spherical form, z = r·exp(iφ); e.g. above, r = 1, φ=45.
+    '''
+    if len(num) != 2:
+        raise ValueError("Value not given as a tuple: {0}. Spherical form of complex number cannot be parsed.".format(num))
+    elif not all(isinstance(x,Number) for x in num):
+        raise ValueError("Tuple parts not instances of Number: {0}.".format(num))
+    else:
+        rad = numpy.deg2rad(num[1])
+        return num[0] * complex(numpy.cos(rad), numpy.sin(rad)) #}}}
+
+def readComplex(config_values): #{{{
     '''
     Transforms a list of values from a Yaml configuration file to a list of
     complex numbers, e.g.:
     ['1+2j', (1,90), (1,45), '3+3j'] -> [(1+2j), (0+1j), (0.707+0.707j), (3+3j)]
     '''
     for v in config_values:
-        yield translateComplex(v)
+        v = literal_eval(v)
+        if isinstance(v,Number):
+            yield v
+        else:
+            yield translateComplex(v) #}}}
+
+def getConfig(inputName): #{{{
+    inputHandle = open(inputName)
+    try:
+        config = yaml.load(inputHandle)
+    except:
+        inputHandle.close()
+        raise
+    else:
+        inputHandle.close()
+        configDict = processConfig(config)
+        return configDict #}}}
 
 def processConfig(config): #{{{
     """
@@ -46,8 +61,6 @@ def processConfig(config): #{{{
                 ,'measurementSteps':    simConf['steps']['measurements']
                 }
 
-    paramDict['N'] = paramDict['x'] * paramDict['y']
-
     muConf = sysConf['mu']
     muU    = sysConf['U'] if muConf['type'] == 'units of U' else 1
     mu     = muU * muConf['value']
@@ -56,7 +69,7 @@ def processConfig(config): #{{{
     BU     = sysConf['U'] if BConf['type'] == 'units of U' else 1
     B      = BU * BConf['type']
 
-    lambda2_gen = readComplex(paramDict['system']['lambda2']['values'])
+    lambda2_gen = readComplex(sysConf['lambda2']['values'])
     lambda2_dict = dict(enumerate(lambda2_gen))
 
     paramDict['domainWall indices'] = defaultdict(list)
@@ -76,10 +89,11 @@ def processConfig(config): #{{{
             else:
                 paramDict['domainWall indices'][i].append( paramDict['y'] * y + x )
     elif lattice_type == 'file':
-        # Code to open and read the lattice file.
+        print("This needs more work!")
     else:
         raise ValueError("No such option for lattice: {0}".format(lattice_type))
 
+    paramDict['N'] = paramDict['x'] * paramDict['y']
     paramDict['lambda2 dictionary'] = lambda2_dict
 
     return paramDict #}}}

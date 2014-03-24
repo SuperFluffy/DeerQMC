@@ -1,13 +1,13 @@
 #!/usr/bin/python
 
-import numpy 
+import numpy
 
 from itertools    import count
 from math         import floor
 from scipy.linalg import LinAlgError
 
 import logging
-import yaml
+from yaml YAMLError
 import argparse
 
 import time
@@ -18,6 +18,7 @@ import h5py
 
 import ast
 
+from configuration import getConfig
 from hamiltonian import makeHamiltonian
 from helper import grouper
 from support import *
@@ -85,7 +86,7 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
 # as per M = 1 + B(1) B(2) ... B(L-1) B(L).
 
     degeneracy = {'up': {'value': 0.0, 'old element': 0.0, 'new element': 0}
-                 ,'down': {'value' 0.0, 'old element': 0.0, 'new element': 0}
+                 ,'down': {'value': 0.0, 'old element': 0.0, 'new element': 0}}
 
 # Unwrap the necessary parameters
     L = paramDict['L']
@@ -482,58 +483,41 @@ def startSimulation(configDict,outputName): #{{{
             finalizeSimulation(paramDict,outputName,record_phases,record_field_1,record_field_2)
 # }}}
 
-
-def getConfig(inputHandle):
-    try:
-        config = yaml.load(inputHandle)
-    except yaml.YAMLError as exc:
-        logging.error("Error in configuration file: {0}".format(exc))
-        if hasattr(exc, 'problem_mark'):
-            mark = exc.problem_mark
-            logging.error("Error position: ({0}:{1})".format(mark.line-1, mark.column-1))
-    else:
-        inputHandle.close()
-        configDict = processConfig(config)
-        return configDict
-
 def main(inputName,outputName): # Controls the entire simulation {{{
-    #r.seed(439451005467937294)
-    #npr.seed(8119087183917565057)
+    if outputName == None:
+        outputName = inputName
+
+    loggingFile,triedNames = makeLoggingFile(outputName) # If opening the file causes no problem, then the path should exist.
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(levelname)s: %(asctime)s - %(message)s',
+        filename=loggingFile,
+        filemode='w')
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(levelname)s: %(asctime)s - %(message)s')
+
+    console.setFormatter(console_formatter)
+    logging.getLogger().addHandler(console)
+
+    logging.info("Path to configuration file: {0}".format(inputName))
+
+    if not len(triedNames) == 0:
+        logging.debug("Logging file(s) exist: {0}".format(triedNames))
+    logging.info("Logging file name: {0}".format(loggingFile))
+
     try:
-        inputHandle = open(inputName)
+        configDict = getConfig(inputName)
+    except YAMLError as yerr:
+        logging.error("Error in configuration file: {0}".format(yerr))
+        if hasattr(yerr, 'problem_mark'):
+            mark = yerr.problem_mark
+            logging.error("Error position: ({0}:{1})".format(mark.line-1, mark.column-1))
     except IOError as ioe:
-        print(ioe)
+        logging.error(ioe)
     else:
-        if outputName == None:
-            outputName = inputName
-
-        loggingFile,triedNames = makeLoggingFile(outputName) # If opening the file causes no problem, then the path should exist.
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(levelname)s: %(asctime)s - %(message)s',
-            filename=loggingFile,
-            filemode='w')
-
-        console = logging.StreamHandler()
-        console.setLevel(logging.INFO)
-        console_formatter = logging.Formatter('%(levelname)s: %(asctime)s - %(message)s')
-
-        console.setFormatter(console_formatter)
-        logging.getLogger().addHandler(console)
-
-        logging.info("Path to configuration file: {0}".format(inputName))
-
-        if not len(triedNames) == 0:
-            logging.debug("Logging file(s) exist: {0}".format(triedNames))
-        logging.info("Logging file name: {0}".format(loggingFile))
-
-        try:
-            configDict = getConfig(inputHandle)
-        except IOError as ioe:
-            logging.error(ioe)
-        else:
-            logging.info("Sets of simulation parameters found in configuration file: {0}".format(len(configDicts)))
-            startSimulation(configDict,outputName)
+        startSimulation(configDict,outputName)
 #}}}
 
 if __name__ == "__main__":

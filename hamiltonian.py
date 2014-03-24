@@ -2,10 +2,10 @@
 This module contains all functions pertaining to the construction of the
 Hamiltonian describing the lattice.
 """
+import numpy
 
 from numpy.random import choice
 from scipy.linalg import expm2
-import numpy *
 
 def makeField(L,N,spinsSample=None): #{{{
     if sample == None:
