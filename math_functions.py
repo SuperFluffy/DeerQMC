@@ -6,12 +6,12 @@ methods, which are used throughout the simulation.
 from scipy.linalg import qr, rq
 from numpy import absolute, diagonal, diagflat, newaxis
 
-__all__ = ['phase','determinantPhase', 'UDR', 'RDU']
+__all__ = ['phase','determinant_phase', 'UDR', 'RDU']
 
 def phase(z): #{{{
     return z/absolute(z) #}}}
 
-def determinantPhase(M): # Return determinant and phase of a matrix M {{{
+def determinant_phase(M): # Return determinant and phase of a matrix M {{{
     """
     Efficient form of returning the absolute and phase of a matrix' determinant
     to avoid repeated calculation of the absolute in the phase-function.

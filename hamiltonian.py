@@ -7,7 +7,7 @@ import numpy
 from numpy.random import choice
 from scipy.linalg import expm2
 
-def makeField(L,N,spinsSample=None): #{{{
+def make_field(L,N,spinsSample=None): #{{{
     if sample == None:
         spinsSample = [-1,+1]
     randarray = choice(spinsSample,size=N*L)
@@ -15,7 +15,7 @@ def makeField(L,N,spinsSample=None): #{{{
     spacetime = randarray.reshape(L,N)
     return spacetime #}}}
 
-def makeHopp1D(n,k): # {{{
+def make_hopp1D(n,k): # {{{
     K  = numpy.eye(n,k=+k,dtype=numpy.float64)
     K += numpy.eye(n,k=-k,dtype=numpy.float64)
 # Set the matrix elements to fulfil the PBC by hand. Has no effect on a 2-site chain
@@ -24,7 +24,7 @@ def makeHopp1D(n,k): # {{{
         K += numpy.eye(n,k=-(n-k))
     return K #}}}
 
-def makeHopp2D(nx,ny,k): # 2D hopping matrix for symmetric, square lattices {{{
+def make_hopp2D(nx,ny,k): # 2D hopping matrix for symmetric, square lattices {{{
     Kx = makeHopp1D(nx,k)
     Ix = numpy.eye(nx,dtype=numpy.float64)
 
@@ -34,7 +34,7 @@ def makeHopp2D(nx,ny,k): # 2D hopping matrix for symmetric, square lattices {{{
     K = numpy.kron(Iy,Kx) + numpy.kron(Ky,Ix)
     return K #}}}
 
-def makePotential(paramDict,C,M): #{{{
+def make_potential(paramDict,C,M): #{{{
     L = paramDict['L']
     N = paramDict['N']
     lambda1_general    = paramDict['lambda1 general']
@@ -65,7 +65,7 @@ def makePotential(paramDict,C,M): #{{{
     return spacetime_1,spacetime_2,expVs_up,expVs_dn
 # }}}
 
-def makeHamiltonian(paramDict): #{{{
+def make_hamiltonian(paramDict): #{{{
     """
     This function constructs all the Hamiltonian describing the system from the
     quantities stored in the parameter dictionary.

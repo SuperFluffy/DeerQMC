@@ -10,9 +10,9 @@ from scipy import det, inv
 from helper import grouper,maximumDegeneracy
 from math_functions import determinantPhase, RDU, UDR
 
-__all__ = ['initGreens','makeGreensParts','updateGreensV','wrapGreens']
+__all__ = ['init_greens','make_greens_parts','update_greensV','wrap_greens']
 
-def initGreens(getPhase,paramDict,expVs,sliceGroups): # {{{
+def init_greens(getPhase,paramDict,expVs,sliceGroups): # {{{
     """
     This function initializes and returns a “state” dictionary, which contains the
     initial Green's function (i.e. the produt of the timeslices form 1 to L), the
@@ -74,7 +74,7 @@ def initGreens(getPhase,paramDict,expVs,sliceGroups): # {{{
 
     return phase,state #}}}
 
-def makeGreensParts(getDeterminant,paramDict,state,sliceCount,sliceGroups): # {{{
+def make_greens_parts(getDeterminant,paramDict,state,sliceCount,sliceGroups): # {{{
     """
     Updates the state dictionary with a new Greens function by calculating it using
     the stored UDR/RDU multiplication groups. Also stores the new UDR
@@ -155,7 +155,7 @@ def makeGreensParts(getDeterminant,paramDict,state,sliceCount,sliceGroups): # {{
 
     return det #}}}
 
-def updateGreensV(i,paramDict,state,weightValues): #{{{
+def update_greensV(i,paramDict,state,weightValues): #{{{
     """
     Performs a Sherman-Morrison update of the Green's function in vectorized
     form to allow Numpy to use a C for-loop.
@@ -171,7 +171,7 @@ def updateGreensV(i,paramDict,state,weightValues): #{{{
     newG     = G + G[i,:] * (G[:,i,numpy.newaxis] - delta[:,numpy.newaxis]) * coeff
     return newG #}}}
 
-def wrapGreens(expK,l,state): # {{{
+def wrap_greens(expK,l,state): # {{{
     """
     Propagates the Green's function to the next time slice using “wrapping”.
     """
@@ -180,7 +180,7 @@ def wrapGreens(expK,l,state): # {{{
     newG = numpy.dot(numpy.dot(B,state['G']),Binv)
     return newG #}}}
 
-def greensDegeneracy(degeneracyDict,A,B): #{{{
+def greens_degeneracy(degeneracyDict,A,B): #{{{
     """
     Calculates the degeneracy between two matrices A, B by looking at the element
     with the largest relative difference. It then compares it to the degeneracy of
@@ -198,7 +198,7 @@ The below functions are kept for reference, but are not used in the simulation, 
 they are surpassed by faster/optimized methods.
 """
 
-def makeGreensUDR(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's function and the sign of the associated determinant {{{
+def make_greensUDR(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's function and the sign of the associated determinant {{{
     det = 0
     order = deque(range(L))
     order.rotate(i)
@@ -230,7 +230,7 @@ def makeGreensUDR(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's functi
     G = numpy.dot(numpy.dot(Rinv,Dinv),Uinv)
     return det,G #}}}
 
-def makeGreensRDU(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's function and the sign of the associated determinant {{{
+def make_greensRDU(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's function and the sign of the associated determinant {{{
     det = 0
     order = deque(range(L))
     order.rotate(i)
@@ -268,7 +268,7 @@ def makeGreensRDU(getDeterminant,L,N,expK,expVs,i,m): # Returns a Green's functi
     G = numpy.dot(Uinv,numpy.dot(Dinv,Rinv))
     return det,G #}}}
 
-def makeGreensNaive(getDeterminant,L,N,expK,expVs,i): # As makeGreensUDR, but without stabilization through UDR decomposition {{{
+def make_greens_naive(getDeterminant,L,N,expK,expVs,i): # As makeGreensUDR, but without stabilization through UDR decomposition {{{
     det = 0
     order = deque(range(L))
     order.rotate(i)
@@ -283,7 +283,7 @@ def makeGreensNaive(getDeterminant,L,N,expK,expVs,i): # As makeGreensUDR, but wi
     G = inv(O)
     return det,G #}}}
 
-def updateGreensL(i,paramDict,state,weightValues): #{{{
+def update_greensL(i,paramDict,state,weightValues): #{{{
     """
     Performs a Sherman-Morrison update of the Green's function
     using a (slow) Python for-loop.

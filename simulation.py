@@ -508,7 +508,7 @@ def main(inputName,outputName): # Controls the entire simulation {{{
     logging.info("Logging file name: {0}".format(loggingFile))
 
     try:
-        configDict = getConfig(inputName)
+        configDict = read_config(inputName)
     except YAMLError as yerr:
         logging.error("Error in configuration file: {0}".format(yerr))
         if hasattr(yerr, 'problem_mark'):
@@ -526,4 +526,3 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", help="The output file; creates an output file based on the input file's name if not specified.", type=str)
     args = parser.parse_args()
     main(args.input, args.output)
-    #main()

@@ -4,9 +4,9 @@ from collections import defaultdict
 from numbers import Number
 from yaml import load
 
-__all__=['getConfig']
+__all__=['read_config']
 
-def translateComplex(num): #{{{
+def translate_complex(num): #{{{
     '''
     Tries converting a tuple like (1,45) into a complex number. The tuple is
     given in spherical form, z = r·exp(iφ); e.g. above, r = 1, φ=45.
@@ -19,7 +19,7 @@ def translateComplex(num): #{{{
         rad = numpy.deg2rad(num[1])
         return num[0] * complex(numpy.cos(rad), numpy.sin(rad)) #}}}
 
-def readComplex(config_values): #{{{
+def read_complex(config_values): #{{{
     '''
     Transforms a list of values from a Yaml configuration file to a list of
     complex numbers, e.g.:
@@ -32,7 +32,7 @@ def readComplex(config_values): #{{{
         else:
             yield translateComplex(v) #}}}
 
-def getConfig(inputName): #{{{
+def read_config(inputName): #{{{
     inputHandle = open(inputName)
     try:
         config = yaml.load(inputHandle)
@@ -44,7 +44,7 @@ def getConfig(inputName): #{{{
         configDict = processConfig(config)
         return configDict #}}}
 
-def processConfig(config): #{{{
+def process_config(config): #{{{
     """
     Reads and processes the simulation configuration file, filling a dictionary of
     all parameters relevant to the simulation.

@@ -4,7 +4,7 @@ from math import ceil
 from math_functions import *
 
 __all__ = ['checkFlip', 'compress_array',
-           'multiplySlicesStart', 'multiplySlicesEnd', 'thermalized',
+           'multiply_slices_start', 'multiply_slices_end', 'thermalized',
            'ParameterError']
 
 class ParameterError(Exception): # Custom exception {{{
@@ -28,19 +28,19 @@ def compress_array(A): # Only chains of up to 64 elements {{{
     return D.view('u8'), {uniqueElements[0]: 0, uniqueElements[1]: 1}
 #}}}
 
-def multiplySlicesStart(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the head. {{{
+def multiply_slices_start(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the head. {{{
     B = numpy.eye(N,dtype=numpy.complex128)
     for l in order:
         B = numpy.dot(B,numpy.dot(expK,expVs[l]))
     return B #}}}
 
-def multiplySlicesEnd(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the tail. {{{
+def multiply_slices_end(N,expK,expVs,order): # Multiplies “B_i”s in a given order from the tail. {{{
     B = numpy.eye(N,dtype=numpy.complex128)
     for l in order:
         B = numpy.dot(numpy.dot(expK,expVs[l]),B)
     return B #}}}
 
-def checkFlip(p,gamma=None): #{{{
+def check_flip(p,gamma=None): #{{{
     r = p / (1+p)
     q = random()
     flip = False
