@@ -16,16 +16,22 @@ def timing(func): # Timing decorator {{{
         return (t2-t1),res
     return wrapper #}}}
 
-def grouper(iterable,n): #{{{ Slices an iterable object into objects of size n
-# From http://stackoverflow.com/questions/12185952/python-optimize-grouper-function-to-avoid-none-elements
-  it = iter(iterable)
-  return iter(lambda: tuple(islice(it,n)), ()) #}}}
+def grouper(iterable,n): #{{{
+   '''
+    Collect data into fixed-length chunks or blocks
+    grouper_padded('ABCDEFG', 3) --> ABC DEF G
+    From http://stackoverflow.com/questions/12185952/python-optimize-grouper-function-to-avoid-none-elements
+    '''
+    it = iter(iterable)
+    return iter(lambda: tuple(islice(it,n)), ()) #}}}
 
-def grouper_padded(iterable, n, fillvalue=None):
-    "Collect data into fixed-length chunks or blocks"
-    # grouper_padded('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+def grouper_padded(iterable, n, fillvalue=None): #{{{
+    '''
+    Collect data into fixed-length chunks or blocks
+    grouper_padded('ABCDEFG', 3, 'x') --> ABC DEF Gxx
+    '''
     args = [iter(iterable)] * n
-    return zip_longest(*args, fillvalue=fillvalue)
+    return zip_longest(*args, fillvalue=fillvalue) #}}
 
 def maximumDegeneracy(A,B): # {{{
     """
@@ -37,4 +43,4 @@ def maximumDegeneracy(A,B): # {{{
     relativeMatrix = numpy.absolute((B-A)/A)
     ix = numpy.argmax(relativeMatrix)
     ix = numpy.unravel_index(deg_index,A.shape)
-    return ix,relativeMatrix[ix]
+    return ix,relativeMatrix[ix] #}}}
