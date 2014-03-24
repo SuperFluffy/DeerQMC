@@ -18,7 +18,7 @@ def compress_array(A): # Only chains of up to 64 elements {{{
     """
     uniqueElements = numpy.unique(A)
     if uniqueElements.size > 2:
-        raise ValueError("Array contains more than two unique elements: {0}".format(', '.join(map(', ', uniqueElements))))
+        raise ValueError("Array contains more than two unique elements: {0}".format(', '.join(map(str, uniqueElements))))
     else:
         needed_uints = ceil(A.size/64)
         B = numpy.zeros(needed_uints * 64,dtype='u1')
