@@ -171,7 +171,7 @@ def sweep(paramDict,sliceGroups,spacetime_1,spacetime_2,weightPhase,upState,down
     return degeneracy,phases,accepted
 #}}}
 
-def makeLoggingFile(outputName): #{{{
+def create_logging_file(outputName): #{{{
     saveName = outputName
     path,basename = osp.split(outputName)
     head,tail = osp.splitext(basename)
@@ -188,6 +188,27 @@ def makeLoggingFile(outputName): #{{{
             outputHandle.close()
             break
     return outputName,triedNames #}}}
+
+def setup_logging(logging_name): #{{{
+    loggingFile,triedNames = makeLoggingFile(logging_name) # If opening the file causes no problem, then the path should exist.
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(levelname)s: %(asctime)s - %(message)s',
+        filename=loggingFile,
+        filemode='w')
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(levelname)s: %(asctime)s - %(message)s')
+
+    console.setFormatter(console_formatter)
+    logging.getLogger().addHandler(console)
+
+    logging.info("Path to configuration file: {0}".format(inputName))
+
+    if not len(triedNames) == 0:
+        logging.debug("Logging file(s) exist: {0}".format(triedNames))
+    logging.info("Logging file name: {0}".format(loggingFile)) #}}}
 
 def makeOutputFile(outputName): #{{{
     saveName = outputName
@@ -483,32 +504,24 @@ def startSimulation(configDict,outputName): #{{{
             finalizeSimulation(paramDict,outputName,record_phases,record_field_1,record_field_2)
 # }}}
 
-def main(inputName,outputName): # Controls the entire simulation {{{
-    if outputName == None:
-        outputName = inputName
+def parse_arguments(): #{{{
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input", help="The simulation configuration input", type=str)
+    parser.add_argument("-o", "--output", help="The output file; creates an output file based on the input file's name if not specified.", type=str)
+    return parser.parse_args() #}}}
 
-    loggingFile,triedNames = makeLoggingFile(outputName) # If opening the file causes no problem, then the path should exist.
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(levelname)s: %(asctime)s - %(message)s',
-        filename=loggingFile,
-        filemode='w')
+def main(): # Controls the entire simulation {{{
+    arguments = parse_arguments()
+    input_name = arguments.input
+    output_name = arguments.output
 
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    console_formatter = logging.Formatter('%(levelname)s: %(asctime)s - %(message)s')
+    if output_name == None:
+        output_name = input_name
 
-    console.setFormatter(console_formatter)
-    logging.getLogger().addHandler(console)
-
-    logging.info("Path to configuration file: {0}".format(inputName))
-
-    if not len(triedNames) == 0:
-        logging.debug("Logging file(s) exist: {0}".format(triedNames))
-    logging.info("Logging file name: {0}".format(loggingFile))
+    setup_logging(output_name)
 
     try:
-        configDict = read_config(inputName)
+        configDict = read_config(input_name)
     except YAMLError as yerr:
         logging.error("Error in configuration file: {0}".format(yerr))
         if hasattr(yerr, 'problem_mark'):
@@ -517,12 +530,8 @@ def main(inputName,outputName): # Controls the entire simulation {{{
     except IOError as ioe:
         logging.error(ioe)
     else:
-        startSimulation(configDict,outputName)
+        startSimulation(configDict,output_name)
 #}}}
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="The simulation configuration input", type=str)
-    parser.add_argument("-o", "--output", help="The output file; creates an output file based on the input file's name if not specified.", type=str)
-    args = parser.parse_args()
-    main(args.input, args.output)
+    main()
