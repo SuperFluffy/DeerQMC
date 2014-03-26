@@ -9,6 +9,8 @@ freely.
 This is work in progress
 ------------------------
 DeerQMC is currently under heavy development and therefore by no means stable.
+At the moment, it is mainly concerned with generating a Markov-Chain of lattice
+configurations.
 
 The `TODO` contains some information on the outstanding fixes and possible
 extensions.
@@ -49,6 +51,7 @@ electron-electron interaction by a coupling to Bosonic (Ising) fields.
 two-dimensional Hubbard model.
 4. Necessary stabilization methods for calculating the Green's functions
 occuring in the simulation.
+
 
 1. http://dx.doi.org/10.1103/PhysRevD.24.2278
 2. http://dx.doi.org/10.1103/PhysRevB.28.4059 
