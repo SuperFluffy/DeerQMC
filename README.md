@@ -1,15 +1,20 @@
 Introduction
 ============
-
 DeerQMC is an implementation of the Determinantal Quantum Monte Carlo
 simulation to study the one- and two-dimensional Hubbard models. Its main
 feature is that it implements an anisotropic transformation of the
 electron-electron interaction on every lattice site, which can be chosen
 freely.
 
+This is work in progress
+------------------------
+DeerQMC is currently under heavy development and therefore by no means stable.
+
+The `TODO` contains some information on the outstanding fixes and possible
+extensions.
+
 Documentation & citation
 ------------------------
-
 A full documentation on how to use this software is in preparation. In the
 meantime, more information on that can be found in my MSc thesis, which can be
 provide upon request.
@@ -20,14 +25,6 @@ software as:
 ```
 R. J. Beckert, DeerQMC (2014), GitHub repository, https://github.com/SuperFluffy/DeerQMC
 ```
-
-Work in progress
-----------------
-
-DeerQMC is currently under heavy development and therefore by no means stable.
-
-The `TODO` contains some information on the outstanding fixes and possible
-extensions.
 
 
 Dependencies
