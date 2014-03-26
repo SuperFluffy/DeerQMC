@@ -31,7 +31,6 @@ R. J. Beckert, DeerQMC (2014), GitHub repository, https://github.com/SuperFluffy
 
 Dependencies
 ============
-
 + `Python >= 3.3`
 + `Numpy >= 1.8`
 + `Scipy >= 0.13`
@@ -41,7 +40,13 @@ Dependencies
 
 Relevant papers
 ===============
+1. http://dx.doi.org/10.1103/PhysRevD.24.2278
+2. http://dx.doi.org/10.1103/PhysRevB.28.4059 
+3. http://dx.doi.org/10.1103/PhysRevB.31.4403
+4. “Stabilization of Simulations of Many-Fermion Systems” (pp. 156--167) in Proceedings of the Los Alamos Conference on Quantum Simulation (1990)
 
+Description
+-----------
 1. The initial proposal by Blanckenbecler, Scalapino, and Sugar for carrying out
 Monte Carlo calculations of field theories with Fermionic degrees of freedom by
 integrating these out.
@@ -51,9 +56,3 @@ electron-electron interaction by a coupling to Bosonic (Ising) fields.
 two-dimensional Hubbard model.
 4. Necessary stabilization methods for calculating the Green's functions
 occuring in the simulation.
-
-
-1. http://dx.doi.org/10.1103/PhysRevD.24.2278
-2. http://dx.doi.org/10.1103/PhysRevB.28.4059 
-3. http://dx.doi.org/10.1103/PhysRevB.31.4403
-4. “Stabilization of Simulations of Many-Fermion Systems” (pp. 156--167) in Proceedings of the Los Alamos Conference on Quantum Simulation (1990)
