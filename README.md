@@ -35,7 +35,7 @@ Dependencies
 + `Numpy >= 1.8`
 + `Scipy >= 0.13`
 + `PyYAML >= 3.10`
-+ `h5py` >= 2.2.1`
++ `h5py >= 2.2.1`
 
 
 Relevant papers
