@@ -22,6 +22,7 @@ def process_config(config): #{{{
                 ,'tn':                  sysConf['tn']
                 ,'tnn':                 sysConf['tnn']
                 ,'U':                   sysConf['U']
+                ,'reset_factor':               simConf['reset_factor']
                 ,'thermalizationSteps': simConf['steps']['thermalization']
                 ,'measurementSteps':    simConf['steps']['measurements']
                 }

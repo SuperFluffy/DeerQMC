@@ -423,8 +423,10 @@ def setupSimulation(configDict): # Fill the simulation parameter dictionary and 
     lambda2_general = paramDict['lambda2 general']
     lambda2_domainWall = paramDict['lambda2 domainWall']
 
+    reset_factor = paramDict['reset factor']
+
     dtau = 1/idtau
-    m = floor(1.2*idtau)
+    m = floor(reset_factor*idtau)
 
     L = beta * idtau
 
