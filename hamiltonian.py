@@ -178,7 +178,7 @@ def hopping_matrix(x,y=1,z=1,neighbours=1,periodic=True,antiperiodic=False,dtype
 
     return k #}}}
 
-def make_potential(paramDict,C,M): #{{{
+def potential_matrix(paramDict,C,M): #{{{
     L = paramDict['L']
     N = paramDict['N']
     lambda1_general    = paramDict['lambda1 general']
@@ -240,9 +240,9 @@ def make_hamiltonian(paramDict): #{{{
     K = Kn + Knn
     expK = expm2(-1*K)
 
-    C = (dtau*mu) * numpy.eye(N,dtype=numpy.float64)
-    M = (dtau*B)  * numpy.eye(N,dtype=numpy.float64)
+    C = (dtau*mu) * eye(N,dtype=float64)
+    M = (dtau*B)  * eye(N,dtype=float64)
 
-    spacetime_1,spacetime_2,expVs_up,expVs_dn = makePotential(paramDict,C,M)
+    spacetime_1,spacetime_2,expVs_up,expVs_dn = potential_matrix(paramDict,C,M)
 
     return expK, spacetime_1, spacetime_2, expVs_up, expVs_dn #}}}
