@@ -2,7 +2,7 @@
 This module contains all functions pertaining to the construction of the
 Hamiltonian describing the lattice.
 """
-import numpy
+from numpy import array, diag, eye, complex128, float64, kron, zeros
 
 from numpy.random import choice
 from scipy.linalg import expm2
@@ -197,14 +197,14 @@ def potential_matrix(paramDict,C,M): #{{{
     lattice_general = paramDict['lattice general']
     lattice_domainWall = paramDict['lattice domainWall']
 
-    V1  = lambda1_general    * numpy.array([numpy.diag(space) for space in (lattice_general * spacetime_1)],dtype=numpy.complex128)
-    V1 += lambda1_domainWall * numpy.array([numpy.diag(space) for space in (lattice_domainWall * spacetime_1)],dtype=numpy.complex128)
+    V1  = lambda1_general    * array([diag(space) for space in (lattice_general * spacetime_1)],dtype=complex128)
+    V1 += lambda1_domainWall * array([diag(space) for space in (lattice_domainWall * spacetime_1)],dtype=complex128)
 
-    V2  = lambda2_general    * numpy.array([numpy.diag(space) for space in (lattice_general * spacetime_2)],dtype=numpy.complex128)
-    V2 += lambda2_domainWall * numpy.array([numpy.diag(space) for space in (lattice_domainWall * spacetime_2)],dtype=numpy.complex128)
+    V2  = lambda2_general    * array([diag(space) for space in (lattice_general * spacetime_2)],dtype=complex128)
+    V2 += lambda2_domainWall * array([diag(space) for space in (lattice_domainWall * spacetime_2)],dtype=complex128)
 
-    expVs_up = numpy.array([expm2(spinUp*v1 + spinUp_other * v2 + C + M) for (v1,v2) in zip(V1,V2)])
-    expVs_dn = numpy.array([expm2(spinDn*v1 + spinDn_other * v2 + C - M) for (v1,v2) in zip(V1,V2)])
+    expVs_up = array([expm2(spinUp*v1 + spinUp_other * v2 + C + M) for (v1,v2) in zip(V1,V2)])
+    expVs_dn = array([expm2(spinDn*v1 + spinDn_other * v2 + C - M) for (v1,v2) in zip(V1,V2)])
 
     return spacetime_1,spacetime_2,expVs_up,expVs_dn
 # }}}
