@@ -7,11 +7,29 @@ from numpy import array, diag, eye, complex128, float64, kron, zeros
 from numpy.random import choice
 from scipy.linalg import expm2
 
-def make_field(L,N,spinsSample=None): #{{{
-    if sample == None:
-        spinsSample = [-1,+1]
+def auxiliary_field(timeslices,lattice_sites,spins=None): #{{{
+    """
+    Returns the space-time lattice with randomly generated auxiliary
+    spins.
+
+    Parameters
+    ----------
+    timeslices : int
+        The number of timeslices.
+    lattice_sites : int
+        The number of sites on the lattice.
+    spins : list, optional
+        The set of values the auxiliary spins can take. If None (default),
+        then only Ising spins (i.e. {↑,↓} represented as the list [+1,-1])
+        are used.
+
+    Returns
+    -------
+    spacetime : ndarray, shape (timeslices×lattice_sites)
+    """
+    if spins == None:
+        spins = [-1,+1]
     randarray = choice(spinsSample,size=N*L)
-# Store array as (L,N), since the Python stores in row-major form -> faster access
     spacetime = randarray.reshape(L,N)
     return spacetime #}}}
 
@@ -24,6 +42,7 @@ def shift_matrix(size,offset=1,periodic=True,antiperiodic=False,dtype=float64): 
     around” the edge of the lattice.
     Note: The shift matrix S = U + L as found in literature, with superdiagonal
     U and subdiagonal L, corresponds to the settings offset=0, periodic=False.
+
     Parameters
     ----------
     size : int
@@ -178,7 +197,7 @@ def hopping_matrix(x,y=1,z=1,neighbours=1,periodic=True,antiperiodic=False,dtype
 
     return k #}}}
 
-def potential_matrix(paramDict,C,M): #{{{
+def potential_matrix(paramDict,C,M,dtype=float64): #{{{
     L = paramDict['L']
     N = paramDict['N']
     lambda1_general    = paramDict['lambda1 general']
@@ -191,17 +210,17 @@ def potential_matrix(paramDict,C,M): #{{{
     spinUp_other = paramDict['spinUp_other']
     spinDn_other = paramDict['spinDn_other']
 
-    spacetime_1 = makeField(L,N)
-    spacetime_2 = makeField(L,N)
+    spacetime_1 = auxiliary_field(L,N)
+    spacetime_2 = auxiliary_field(L,N)
 
     lattice_general = paramDict['lattice general']
     lattice_domainWall = paramDict['lattice domainWall']
 
-    V1  = lambda1_general    * array([diag(space) for space in (lattice_general * spacetime_1)],dtype=complex128)
-    V1 += lambda1_domainWall * array([diag(space) for space in (lattice_domainWall * spacetime_1)],dtype=complex128)
+    V1  = lambda1_general    * array([diag(space) for space in (lattice_general * spacetime_1)],dtype=float64)
+    V1 += lambda1_domainWall * array([diag(space) for space in (lattice_domainWall * spacetime_1)],dtype=float64)
 
-    V2  = lambda2_general    * array([diag(space) for space in (lattice_general * spacetime_2)],dtype=complex128)
-    V2 += lambda2_domainWall * array([diag(space) for space in (lattice_domainWall * spacetime_2)],dtype=complex128)
+    V2  = lambda2_general    * array([diag(space) for space in (lattice_general * spacetime_2)],dtype=float64)
+    V2 += lambda2_domainWall * array([diag(space) for space in (lattice_domainWall * spacetime_2)],dtype=float64)
 
     expVs_up = array([expm2(spinUp*v1 + spinUp_other * v2 + C + M) for (v1,v2) in zip(V1,V2)])
     expVs_dn = array([expm2(spinDn*v1 + spinDn_other * v2 + C - M) for (v1,v2) in zip(V1,V2)])
@@ -209,13 +228,13 @@ def potential_matrix(paramDict,C,M): #{{{
     return spacetime_1,spacetime_2,expVs_up,expVs_dn
 # }}}
 
-def make_hamiltonian(paramDict): #{{{
+def make_hamiltonian(paramDict,periodic=True,antiperiodic=False,dtype=float64): #{{{
     """
     This function constructs all the Hamiltonian describing the system from the
     quantities stored in the parameter dictionary.
     """
-    edgeLength_x = paramDict['edgeLength x']
-    edgeLength_y = paramDict['edgeLength y']
+    x = paramDict['edgeLength x']
+    y = paramDict['edgeLength y']
     N = paramDict['N']
     tn = paramDict['tn']
     tnn = paramDict['tnn']
@@ -235,14 +254,16 @@ def make_hamiltonian(paramDict): #{{{
     spinUp_other = paramDict['spinUp_other']
     spinDn_other = paramDict['spinDn_other']
 
-    Kn  = (-dtau*tn) *  makeHopp2D(edgeLength_x,edgeLength_y,1)
-    Knn = (-dtau*tnn) * makeHopp2D(edgeLength_x,edgeLength_y,2)
-    K = Kn + Knn
-    expK = expm2(-1*K)
+    #Kn  = (-dtau*tn) *  hopping_matrix(edgeLength_x,edgeLength_y,1,dtype=dtype)
+    #Knn = (-dtau*tnn) * hopping_matrix(edgeLength_x,edgeLength_y,2,dtype=dtype)
+    k_n  = (-dtau*tn)  * neighbour_hopping(x=x,y=y,z=z,distance=1,shift=0,periodic=periodic,antiperiodic=antiperiodic,dtype=dtype)
+    k_nn = (-dtau*tnn) * neighbour_hopping(x=x,y=y,z=z,distance=1,shift=1,periodic=periodic,antiperiodic=antiperiodic,dtype=dtype)
+    k = k_n + k_nn
+    exp_k = expm2(-1*k)
 
     C = (dtau*mu) * eye(N,dtype=float64)
     M = (dtau*B)  * eye(N,dtype=float64)
 
-    spacetime_1,spacetime_2,expVs_up,expVs_dn = potential_matrix(paramDict,C,M)
+    spacetime_1,spacetime_2,expVs_up,expVs_dn = potential_matrix(paramDict,C,M,dtype=dtype)
 
-    return expK, spacetime_1, spacetime_2, expVs_up, expVs_dn #}}}
+    return exp_k, spacetime_1, spacetime_2, expVs_up, expVs_dn #}}}
