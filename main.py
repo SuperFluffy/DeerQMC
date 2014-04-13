@@ -474,7 +474,7 @@ def setupSimulation(configDict): # Fill the simulation parameter dictionary and 
     paramDict['lattice domainWall'] = lattice_domainWall
 
     #spacetime_1,spacetime_2,weightPhase,upState,downState = makeHamiltonian(paramDict,sliceGroups)
-    expK, spacetime_1,spacetime_2,expVs_up, expVs_dn = makeHamiltonian(paramDict)
+    expK, spacetime_1,spacetime_2,expVs_up, expVs_dn = hamiltonian(paramDict)
 
     paramDict['expK'] = expK
 

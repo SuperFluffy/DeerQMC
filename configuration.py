@@ -19,10 +19,11 @@ def process_config(config): #{{{
 
     paramDict = {'beta':                sysConf['beta']
                 ,'idtau':               sysConf['idtau']
-                ,'tn':                  sysConf['tn']
-                ,'tnn':                 sysConf['tnn']
+                ,'t':                   sysConf['t']
+                ,'periodic':            sysConf['periodic']
+                ,'period':              sysConf['period']
                 ,'U':                   sysConf['U']
-                ,'reset_factor':               simConf['reset_factor']
+                ,'reset_factor':        simConf['reset_factor']
                 ,'thermalizationSteps': simConf['steps']['thermalization']
                 ,'measurementSteps':    simConf['steps']['measurements']
                 }

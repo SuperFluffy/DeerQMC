@@ -33,7 +33,7 @@ def auxiliary_field(timeslices,lattice_sites,spins=None): #{{{
     spacetime = randarray.reshape(L,N)
     return spacetime #}}}
 
-def shift_matrix(size,offset=1,periodic=True,antiperiodic=False,dtype=float64): #{{{
+def shift_matrix(size,offset=1,periodic=True,period=1.0,dtype=float64): #{{{
     """
     Returns a shift matrix with super- and subdiagonals with a distance
     <offset> from the principal diagonal. When <periodic> is set, extra
@@ -56,9 +56,9 @@ def shift_matrix(size,offset=1,periodic=True,antiperiodic=False,dtype=float64): 
         If set, two extra super- and subdiagonals are inserted, but
         at a distance of (size - offset), i.e. placed not w.r.t. to the
         diagonal, but w.r.t. to the fartest point from the diagonal.
-    antiperiodic :  bool, optional.
-        If set, the periodic diagonals are multiplied by (-1).
-        This setting is ignored if periodic is not set.
+    period :  float, optional.
+        The strength p of the periodic boundary. If p > 0, the boundary
+        is periodic; if p < 0, the boundary is antiperiodic.
     dtype : data-type, optional
         Desired output data type.
 
@@ -74,15 +74,14 @@ def shift_matrix(size,offset=1,periodic=True,antiperiodic=False,dtype=float64): 
     if periodic and size>offset:
         u = eye(size,k=(size-offset))
         l = eye(size,k=-(size-offset))
-        if antiperiodic:
-            u *= -1
-            l *= -1
+        u *= period
+        l *= period
         k += u
         k += l
 
     return k #}}}
 
-def neighbour_hopping(x,y=1,z=1,distance=1,shift=0,periodic=True,antiperiodic=False,dtype=float64): #{{{
+def neighbour_hopping(x,y=1,z=1,distance=1,shift=0,periodic=True,period=1.0,dtype=float64): #{{{
     """
     Returns the matrix with entries describing the hopping between neighbouring
     sites in a square lattice. The degree of the hopping (e.g.
@@ -115,10 +114,9 @@ def neighbour_hopping(x,y=1,z=1,distance=1,shift=0,periodic=True,antiperiodic=Fa
     periodic : bool, optional
         If set, periodic boundaries at the lattice edges are set, so
         that hoppings between “start” and “end” of the lattice can occur.
-        diagonal, but w.r.t. to the fartest point from the diagonal.
-    antiperiodic :  bool, optional.
-        If set, the the boundary hopping is anti-periodic (i.e. multiplied
-        by the factor (-1).
+    period :  float, optional.
+        The strength p of the periodic boundary. If p > 0, the boundary
+        is periodic; if p < 0, the boundary is antiperiodic.
     dtype : data-type, optional
         Desired output data type.
 
@@ -127,8 +125,8 @@ def neighbour_hopping(x,y=1,z=1,distance=1,shift=0,periodic=True,antiperiodic=Fa
     k : ndarray, shape s×s, where s = (x*y*z) (at the moment, always z=1)
     """
 
-    with_distance = lambda dim: shift_matrix(dim,offset=distance,periodic=periodic,antiperiodic=antiperiodic,dtype=dtype)
-    with_shift = lambda dim: shift_matrix(dim,offset=shift,periodic=periodic,antiperiodic=antiperiodic,dtype=dtype)
+    with_distance = lambda dim: shift_matrix(dim,offset=distance,periodic=periodic,period=period,dtype=dtype)
+    with_shift = lambda dim: shift_matrix(dim,offset=shift,periodic=periodic,period=period,dtype=dtype)
 
     k_x = with_distance(x)
     s_y = with_shift((y)
@@ -141,7 +139,7 @@ def neighbour_hopping(x,y=1,z=1,distance=1,shift=0,periodic=True,antiperiodic=Fa
         k += kron(k_y,s_x)
     return k #}}}
 
-def hopping_matrix(x,y=1,z=1,neighbours=1,periodic=True,antiperiodic=False,dtype=float64): #{{{
+def hopping_matrix(x,y=1,z=1,couplings=None,periodic=True,period=1.0,dtype=float64): #{{{
     """
     Returns the hopping matrix, i.e. the matrix in kinetic tight-binding term,
     for a lattice with dimensions (x,y,z) (at the moment z is meaningless).
@@ -159,42 +157,59 @@ def hopping_matrix(x,y=1,z=1,neighbours=1,periodic=True,antiperiodic=False,dtype
     z : integer, optional
         Length/number of nodes in z direction.
         Currently a dummy variable without effect.
-    neighbours : integer, optional
-        Up to which neighbour-degree hopping should be included. E.g.,
-        a value of 2 includes nearest- and next-to-nearest-neighbour
-        hopping.
-        If 1 (default), only nearest-neighbour hopping is included.
+    couplings : list of numbers (objects that are instances of numbers.Number), optional
+        The cardinality of the list fixes the highest degree of
+        neighbour-hopping included in the calculation of the kinetic term.  The
+        values in the list are the coupling constants belonging to each degree,
+        starting with the lowest (i.e. next-neighbour hopping).
+        E.g.: [1,0.5] creates a hopping term up to next-to-nearest-neighbour
+        (NNN) hopping, with t=1 for NN and t'=0.5 for NNN.  If None, all matrix
+        entries are set to 0 (i.e., no hopping occurs).
     periodic : bool, optional
-        If set, periodic boundaries at the lattice edges are set, so
-        that hoppings between “start” and “end” of the lattice can occur.
-        diagonal, but w.r.t. to the fartest point from the diagonal.
-    antiperiodic :  bool, optional.
-        If set, the the boundary hopping is anti-periodic (i.e. multiplied
-        by the factor (-1).
+        If set, periodic boundaries at the lattice edges are set, so that
+        hoppings between “start” and “end” of the lattice can occur.
+    period :  float, optional.
+        The strength p of the periodic boundary. If p > 0, the boundary is
+        periodic; if p < 0, the boundary is antiperiodic.
     dtype : data-type, optional
         Desired output data type.
 
     Returns
     -------
     k : ndarray, shape s×s, where s = (x*y*z) (at the moment, always z=1)
+
+    Raises
+    ------
+    ValueError
+        If there are so many entries in neighbour_couplings that the hopping
+        vector connecting two nodes wraps around the lattice (e.g. in cases
+        like a hopping occuring between a node and itself).
     """
 
     edge_length = x*y
     k = zeros((edge_length,edge_length))
 
-    distance = 1
-    shift = 0
+    if couplings is not None:
+        d = min(x,y) - 1
+        maximum_neighbours = (d**2 + 3*d)//2
+        neighbours = len(couplings)
+        
+        if neighbours > maximum_degree:
+            error_message = """Couplings for a hopping degree of up to {0} found, \
+                but only a degree of {1} stays within the lattice (dimensions (x,y) \
+                = ({2},{3})).""".format(neighbours, maximum_degree, x, y)
 
-    #for n in range(neighbours):
-    while neighbours > 0:
-        k += neighbour_hopping(x,y=y,z=z,distance=distance,shift=shift,periodic=periodic,antiperiodic=antiperiodic,dtype=dtype)
-        neighbours -= 1
-        if shift < distance:
-            shift += 1
+            raise ValueError(error_message)
         else:
-            distance += 1
+            distance = 0
             shift = 0
-
+            for t in couplings:
+                if shift < distance:
+                    shift += 1
+                else:
+                    distance += 1
+                    shift = 0
+                k += -t * neighbour_hopping(x,y=y,z=z,distance=distance,shift=shift,periodic=periodic,period=period,dtype=dtype)
     return k #}}}
 
 def potential_matrix(paramDict,C,M,dtype=float64): #{{{
@@ -228,7 +243,7 @@ def potential_matrix(paramDict,C,M,dtype=float64): #{{{
     return spacetime_1,spacetime_2,expVs_up,expVs_dn
 # }}}
 
-def make_hamiltonian(paramDict,periodic=True,antiperiodic=False,dtype=float64): #{{{
+def hamiltonian(paramDict,dtype=float64): #{{{
     """
     This function constructs all the Hamiltonian describing the system from the
     quantities stored in the parameter dictionary.
@@ -236,8 +251,9 @@ def make_hamiltonian(paramDict,periodic=True,antiperiodic=False,dtype=float64): 
     x = paramDict['edgeLength x']
     y = paramDict['edgeLength y']
     N = paramDict['N']
-    tn = paramDict['tn']
-    tnn = paramDict['tnn']
+    t = paramDict['t']
+    periodic = paramDict['periodic']
+    period = paramDict['period']
     mu = paramDict['mu']
     B = paramDict['B']
     dtau = paramDict['dtau']
@@ -254,12 +270,8 @@ def make_hamiltonian(paramDict,periodic=True,antiperiodic=False,dtype=float64): 
     spinUp_other = paramDict['spinUp_other']
     spinDn_other = paramDict['spinDn_other']
 
-    #Kn  = (-dtau*tn) *  hopping_matrix(edgeLength_x,edgeLength_y,1,dtype=dtype)
-    #Knn = (-dtau*tnn) * hopping_matrix(edgeLength_x,edgeLength_y,2,dtype=dtype)
-    k_n  = (-dtau*tn)  * neighbour_hopping(x=x,y=y,z=z,distance=1,shift=0,periodic=periodic,antiperiodic=antiperiodic,dtype=dtype)
-    k_nn = (-dtau*tnn) * neighbour_hopping(x=x,y=y,z=z,distance=1,shift=1,periodic=periodic,antiperiodic=antiperiodic,dtype=dtype)
-    k = k_n + k_nn
-    exp_k = expm2(-1*k)
+    k = hopping_matrix(x=x,y=y,z=1,neighbour_couplings=t,periodic=periodic,period=period,dtype=dtype)
+    exp_k = expm2(-dtau*k)
 
     C = (dtau*mu) * eye(N,dtype=float64)
     M = (dtau*B)  * eye(N,dtype=float64)
