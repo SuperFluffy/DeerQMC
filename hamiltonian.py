@@ -273,8 +273,8 @@ def hamiltonian(paramDict,dtype=float64): #{{{
     k = hopping_matrix(x=x,y=y,z=1,neighbour_couplings=t,periodic=periodic,period=period,dtype=dtype)
     exp_k = expm2(-dtau*k)
 
-    C = (dtau*mu) * eye(N,dtype=float64)
-    M = (dtau*B)  * eye(N,dtype=float64)
+    C = (dtau*mu) * eye(N,dtype=dtype)
+    M = (dtau*B)  * eye(N,dtype=dtype)
 
     spacetime_1,spacetime_2,expVs_up,expVs_dn = potential_matrix(paramDict,C,M,dtype=dtype)
 
