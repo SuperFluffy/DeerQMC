@@ -17,15 +17,15 @@ def process_config(config): #{{{
     sysConf = config['system']
     simConf = config['simulation']
 
-    paramDict = {'beta':                sysConf['beta']
-                ,'idtau':               sysConf['idtau']
-                ,'t':                   sysConf['t']
-                ,'periodic':            sysConf['periodic']
-                ,'period':              sysConf['period']
-                ,'U':                   sysConf['U']
-                ,'reset_factor':        simConf['reset_factor']
-                ,'thermalizationSteps': simConf['steps']['thermalization']
-                ,'measurementSteps':    simConf['steps']['measurements']
+    paramDict = {'beta':                    sysConf['beta']
+                ,'idtau':                   sysConf['idtau']
+                ,'t':                       sysConf['t']
+                ,'periodic':                sysConf['periodic']
+                ,'period':                  sysConf['period']
+                ,'u':                       sysConf['u']
+                ,'reset_factor':            simConf['reset_factor']
+                ,'thermalization_steps':    simConf['steps']['thermalization']
+                ,'measurement_steps':       simConf['steps']['measurements']
                 }
 
     muConf = sysConf['mu']
@@ -34,7 +34,7 @@ def process_config(config): #{{{
 
     BConf  = sysConf['B']
     BU     = sysConf['U'] if BConf['type'] == 'units of U' else 1
-    B      = BU * BConf['type']
+    B      = BU * BConf['value']
 
     lambda2_gen = read_complex(sysConf['lambda2']['values'])
     lambda2_dict = dict(enumerate(lambda2_gen))
