@@ -29,11 +29,11 @@ def process_config(config): #{{{
                 }
 
     muConf = sysConf['mu']
-    muU    = sysConf['U'] if muConf['type'] == 'units of U' else 1
+    muU    = sysConf['u'] if muConf['type'] == 'units of u' else 1
     mu     = muU * muConf['value']
 
-    BConf  = sysConf['B']
-    BU     = sysConf['U'] if BConf['type'] == 'units of U' else 1
+    BConf  = sysConf['b']
+    BU     = sysConf['u'] if BConf['type'] == 'units of u' else 1
     B      = BU * BConf['value']
 
     lambda2_gen = read_complex(sysConf['lambda2']['values'])
