@@ -15,3 +15,4 @@
 # Physics
 - [ ] Calculate observables from the stored configurations
 - [ ] Other geometries (e.g. hexagonal, honeycomb, 3D)
+
