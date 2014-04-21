@@ -17,9 +17,12 @@ extensions.
 
 Documentation & citation
 ------------------------
-A full documentation on how to use this software is in preparation. In the
-meantime, more information on that can be found in my MSc thesis, which can be
-provide upon request.
+A full documentation on how to use this software is in preparation and will
+be made available once it has (again) reached a sufficiently stable state. In the
+meantime, an introductory review of the DQMC method (as well as an extended list
+of the relevant literature) can be found in my Master thesis available at:
+http://kth.diva-portal.org/smash/record.jsf?searchId=1&pid=diva2:708672
+
 
 If you obtained your numerical results using this software, I would kindly ask
 you to send me an email with a reference to your work, and to cite this
