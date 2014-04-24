@@ -36,13 +36,17 @@ def process_config(config): #{{{
     BU     = sysConf['u'] if BConf['type'] == 'units of u' else 1
     B      = BU * BConf['value']
 
-    lambda2_gen = read_complex(sysConf['lambda2']['values'])
-    lambda2_dict = dict(enumerate(lambda2_gen))
+    lambda2_list = list(read_complex(sysConf['lambda2']['values']))
+# Make all entries in the list real if all elements have no imaginary part
+    if all(l == 0.0 for l in lambda2_list):
+        lambda2_list = [l.real for l in lambda2_list]
+
+    lambda2_values = array(lambda2_list)
 
     paramDict['x'],paramDict['y'],paramDict['nodes'] = process_lattice(sysConf['lattice'])
 
     paramDict['N'] = paramDict['x'] * paramDict['y']
-    paramDict['lambda2 dictionary'] = lambda2_dict
+    paramDict['lambda2 values'] = lambda2_values
 
     return paramDict #}}}
 
