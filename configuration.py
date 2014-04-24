@@ -1,4 +1,4 @@
-from numpy import array, deg2rad, cos, sin, unique, where
+from numpy import array, deg2rad, empty, cos, sin, unique, where
 from ast import literal_eval
 from collections import defaultdict, Counter
 from numbers import Number
@@ -74,10 +74,10 @@ def lattice_from_file(lattice_file): #{{{
     lattice_flat = lattice.reshape(lattice.size)
     y, x = lattice.shape
     unique_elements = dict(enumerate(unique(lattice)))
-    nodes = {}
+    lambda_lattice = empty(y*x,dtype='u2')
     for k,v in unique_elements.items():
-        nodes[k] = where(lattice_flat == v)
-    return x,y,nodes #}}}
+        nodes[where(lattice == v)] = k
+    return x,y,lambda_lattice #}}}
 
 def lattice_from_parameter(lattice_dictionary): #{{{
     xdim = lattice_dictionary['edgeLength']['x']
@@ -98,17 +98,26 @@ def lattice_from_parameter(lattice_dictionary): #{{{
 
     idx_list = list(chain(*node_dictionary.values()))
     idx_set = set(idx_list)
+
     if len(idx_list) != len(idx_set):
         dups = [i for i,j in Counter(idx_list).items() if j>1]
         raise ValueError("Ambiguous λ₂ for lattice indices: {0}.".format(", ".join(map(str,dups))))
+
     non_default_keys = set(node_dictionary.keys()) - set([0])
     default_indices = set(range(xdim*ydim))
+
     for k,v in node_dictionary.items():
         if k in non_default_keys:
             default_indices -= set(v)
+
     node_dictionary[0] = list(default_indices)
     node_dictionary = dict([k,array(v)] for k,v in node_dictionary.items())
-    return xdim,ydim,node_dictionary #}}}
+
+    lambda_lattice = empty(xdim *ydim,dtype='u2')
+    for l,idx in node_dictionary.items():
+        lambda_lattice[idx] = l
+
+    return xdim,ydim,lambda_lattice #}}}
 
 def process_lattice(lattice_dictionary): #{{{
     lattice_input = lattice_dictionary['type']
