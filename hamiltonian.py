@@ -210,7 +210,7 @@ def auxiliary_field(timeslices,lattice_sites,spin_species=None): #{{{
     spacetime_field : ndarray, shape (timeslices×lattice_sites)
     """
     if spin_species is None:
-        spin_species = [-1,+1]
+        spin_species = defaults['spin species']
     randarray = choice(spin_species,size=N*L)
     spacetime = randarray.reshape(L,N)
     return spacetime_field #}}}
