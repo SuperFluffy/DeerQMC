@@ -41,9 +41,7 @@ def process_config(path,config): #{{{
     lambda2_list = list(read_complex(sysConf['lambda2']['values']))
 # Make all entries in the list real if all elements have no imaginary part
     if all(l == 0.0 for l in lambda2_list):
-        lambda2_list = [l.real for l in lambda2_list]
-
-    lambda2_values = array(lambda2_list)
+        lambda2_values = array([l.real for l in lambda2_list])
 
     paramDict['x'],paramDict['y'],paramDict['nodes'] = process_lattice(path,sysConf['lattice'])
 
