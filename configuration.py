@@ -1,4 +1,5 @@
-from numpy import array, deg2rad, empty, cos, sin, unique, where
+from numpy import array, deg2rad, empty, imag, cos, sin, unique, where
+import numpy
 from ast import literal_eval
 from collections import defaultdict, Counter
 from numbers import Number
@@ -38,10 +39,10 @@ def process_config(path,config): #{{{
     BU     = sysConf['u'] if BConf['type'] == 'units of u' else 1
     B      = BU * BConf['value']
 
-    lambda2_list = list(read_complex(sysConf['lambda2']['values']))
+    lambda2_values = array(list(read_complex(sysConf['lambda2']['values'])))
 # Make all entries in the list real if all elements have no imaginary part
-    if all(l == 0.0 for l in lambda2_list):
-        lambda2_values = array([l.real for l in lambda2_list])
+    if numpy.all(lambda2_values.imag == 0.0):
+        lambda2_values = lambda2_values.real
 
     paramDict['x'],paramDict['y'],paramDict['nodes'] = process_lattice(path,sysConf['lattice'])
 
@@ -57,7 +58,9 @@ def read_complex(config_values): #{{{
     ['1+2j', (1,90), (1,45), '3+3j'] -> [(1+2j), (0+1j), (0.707+0.707j), (3+3j)]
     '''
     for v in config_values:
-        v = literal_eval(v)
+# pyYaml converts integer/float literals into the correct type; we need to make
+# sure that they are strings so literal_eval() can act on them as well.
+        v = literal_eval(str(v))
         if isinstance(v,Number):
             yield v
         else:
