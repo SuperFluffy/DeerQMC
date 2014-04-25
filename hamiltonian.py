@@ -7,6 +7,9 @@ from numpy import array, copy, diag, empty, eye, exp, complex128, float64, kron,
 from numpy.random import choice
 from scipy.linalg import expm2
 
+# Default values which are used in more than one function.
+defaults = {'spin species': [-1,+1]}
+
 def shift_matrix(size,offset=1,periodic=True,period=1.0,dtype=float64): #{{{
     """
     Returns a shift matrix with super- and subdiagonals with a distance
@@ -235,7 +238,7 @@ def possible_values(lambda_lattice,spin_species=None): #{{{
     """
 
     if spin_species is None:
-        spin_species = [-1,+1]
+        spin_species = defaults['spin species']
 
     a = empty((len(spin_species), lambda_lattice.size))
 
