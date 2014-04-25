@@ -5,11 +5,13 @@ from numbers import Number
 from yaml import load
 from re import match
 
+import os.path
+
 from itertools import chain
 
 __all__=['read_config']
 
-def process_config(config): #{{{
+def process_config(path,config): #{{{
     """
     Reads and processes the simulation configuration file, filling a dictionary of
     all parameters relevant to the simulation.
@@ -43,7 +45,7 @@ def process_config(config): #{{{
 
     lambda2_values = array(lambda2_list)
 
-    paramDict['x'],paramDict['y'],paramDict['nodes'] = process_lattice(sysConf['lattice'])
+    paramDict['x'],paramDict['y'],paramDict['nodes'] = process_lattice(path,sysConf['lattice'])
 
     paramDict['N'] = paramDict['x'] * paramDict['y']
     paramDict['lambda2 values'] = lambda2_values
@@ -70,17 +72,18 @@ def read_config(configuration_file): #{{{
         except:
             raise
         else:
-            configDict = process_config(config)
+            path,basename = os.path.split(configuration_file)
+            configDict = process_config(path,config)
             return configDict #}}}
 
-def lattice_from_file(lattice_file): #{{{
-    lattice = array(read_lattice(lattice_file))
+def lattice_from_file(path_to_lattice): #{{{
+    lattice = array(read_lattice(path_to_lattice))
     lattice_flat = lattice.reshape(lattice.size)
     y, x = lattice.shape
     unique_elements = dict(enumerate(unique(lattice)))
     lambda_lattice = empty(y*x,dtype='u2')
     for k,v in unique_elements.items():
-        nodes[where(lattice == v)] = k
+        lambda_lattice[where(lattice_flat == v)] = k
     return x,y,lambda_lattice #}}}
 
 def lattice_from_parameter(lattice_dictionary): #{{{
@@ -123,12 +126,13 @@ def lattice_from_parameter(lattice_dictionary): #{{{
 
     return xdim,ydim,lambda_lattice #}}}
 
-def process_lattice(lattice_dictionary): #{{{
+def process_lattice(path,lattice_dictionary): #{{{
     lattice_input = lattice_dictionary['type']
     if lattice_input == 'parameter':
         return lattice_from_parameter(lattice_dictionary)
     elif lattice_input == 'file':
-        return lattice_from_file(lattice_dictionary['file'])
+        path_to_lattice = os.path.join(path,lattice_dictionary['file'])
+        return lattice_from_file(path_to_lattice)
     else:
         raise ValueError("No such input type for lattice: {0}".format(lattice_input)) #}}}
 
