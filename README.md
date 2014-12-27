@@ -1,3 +1,8 @@
+MIGRATION TO FORTRAN
+====================
+The development of DeerQMC in Python has stopped, and the software is slowly
+being moved to Fortran 2008, with direct calls to `LAPACK`.
+
 Introduction
 ============
 DeerQMC is an implementation of the Determinantal Quantum Monte Carlo
